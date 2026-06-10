@@ -148,6 +148,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
 .tbl .strong{font-weight:700;color:var(--navy)}
 .tbl .right{text-align:right}
 .tbl .center{text-align:center}
+.cell-lnk{cursor:pointer;transition:.12s;border-bottom:1px dashed transparent}
+.cell-lnk:hover{color:var(--blue);border-bottom-color:rgba(27,95,227,.5)}
+.cell-proj{font-weight:600}
 .row-act{display:inline-flex;gap:6px}
 .row-act button{color:var(--gray);padding:4px 8px;border-radius:7px;font-size:13px}
 .row-act button:hover{background:var(--soft);color:var(--blue)}

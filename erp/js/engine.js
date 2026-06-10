@@ -7,16 +7,38 @@ import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
-/* 字段值渲染 */
+/* 关联项目详情弹窗（点击任意"项目"词时下钻） */
+function projectDetail(id){
+    const p = Store.get("projects",id);
+    if(!p){ toast("未找到关联项目记录","err"); return; }
+    const g = (p.contractAmount||0)-(p.actualCost||0);
+    modal({ title:p.name, large:true, body:`<div class="detail-grid">
+        <div class="di"><span>项目编号</span><b>${p.id}</b></div>
+        <div class="di"><span>项目类型</span><b>${esc(p.type||"—")}</b></div>
+        <div class="di"><span>项目负责人</span><b>${esc(p.manager||"—")}</b></div>
+        <div class="di"><span>当前状态</span><b>${badge(p.status)}</b></div>
+        <div class="di"><span>合同金额</span><b>${fmt.money(p.contractAmount)}</b></div>
+        <div class="di"><span>实际成本</span><b>${fmt.money(p.actualCost)}</b></div>
+        <div class="di"><span>项目毛利</span><b style="color:${g>=0?'#16a34a':'#dc2626'}">${fmt.money(g)}</b></div>
+        <div class="di"><span>风险等级</span><b>${riskBadge(p.risk)}</b></div>
+        <div class="di"><span>已收款</span><b>${fmt.money(p.received)}</b></div>
+        <div class="di full"><span>回款进度</span>${bar(p.contractAmount?p.received/p.contractAmount*100:0)}</div>
+    </div>`, footer:`<button class="btn btn-light" data-close>关闭</button><button class="btn btn-primary" data-go>查看项目台账 ›</button>`,
+        onMount:(el,close)=>{ el.querySelector("[data-go]").onclick=()=>{close();location.hash="project_0_0";}; } });
+}
+
+/* 字段值渲染（重要词均可点击下钻） */
 function show(field, rec){
     let v = rec[field.key];
     if(v==null || v==="") return '<span class="muted">—</span>';
-    if(field.key==="project") return esc(projName(v));
+    if(field.key==="project") return `<a class="cell-lnk cell-proj" data-pid="${esc(v)}" title="查看项目详情">${esc(projName(v))}</a>`;
     if(field.money) return `<span class="num">${fmt.money(+v||0)}</span>`;
-    if(field.riskBadge) return riskBadge(v);
-    if(field.badge) return badge(v);
+    if(field.riskBadge) return field.filter ? `<a class="cell-lnk" data-fk="${field.key}" data-fv="${esc(v)}" title="按此筛选">${riskBadge(v)}</a>` : riskBadge(v);
+    if(field.badge) return field.filter ? `<a class="cell-lnk" data-fk="${field.key}" data-fv="${esc(v)}" title="按此筛选">${badge(v)}</a>` : badge(v);
     if(field.bar) return bar(+v||0);
-    return esc(v);
+    if(field.filter) return `<a class="cell-lnk" data-fk="${field.key}" data-fv="${esc(v)}" title="按此筛选">${esc(v)}</a>`;
+    if(field.key==="name"||field.key==="title"||field.key==="code") return `<a class="cell-lnk" data-detail="${esc(rec.id)}" title="查看详情">${esc(v)}</a>`;
+    return `<a class="cell-lnk" data-q="${esc(v)}" title="搜索相关记录">${esc(v)}</a>`;
 }
 
 /* ---------- 列表页 ---------- */
@@ -72,9 +94,19 @@ function listPage(leaf, schema){
         wire();
     }
     function wire(){
-        $$("#viewArea [data-act='view']").forEach(b=>b.onclick=()=>detail(b.dataset.id));
-        $$("#viewArea [data-act='edit']").forEach(b=>b.onclick=()=>form(b.dataset.id));
-        $$("#viewArea [data-act='del']").forEach(b=>b.onclick=()=>confirmBox(`确认删除该${leaf.name}记录？`,()=>{Store.remove(leaf.coll,b.dataset.id);toast("已删除");render();}));
+        $$("#viewArea [data-act='view']").forEach(b=>b.onclick=e=>{e.stopPropagation();detail(b.dataset.id);});
+        $$("#viewArea [data-act='edit']").forEach(b=>b.onclick=e=>{e.stopPropagation();form(b.dataset.id);});
+        $$("#viewArea [data-act='del']").forEach(b=>b.onclick=e=>{e.stopPropagation();confirmBox(`确认删除该${leaf.name}记录？`,()=>{Store.remove(leaf.coll,b.dataset.id);toast("已删除");render();});});
+        // 单元格内"重要词"点击下钻
+        $$("#viewArea .cell-lnk").forEach(a=>a.onclick=e=>{
+            e.stopPropagation(); const d=a.dataset;
+            if(d.pid) projectDetail(d.pid);
+            else if(d.fk!=null){ state.filters[d.fk]=d.fv; const sel=document.querySelector(`[data-f="${d.fk}"]`); if(sel) sel.value=d.fv; render(); toast(`已按「${d.fv}」筛选`); }
+            else if(d.detail!=null) detail(d.detail);
+            else if(d.q!=null){ state.q=d.q; const qi=$("#q"); if(qi) qi.value=d.q; render(); }
+        });
+        // 整行点击查看详情
+        $$("#viewArea .tbl tbody tr").forEach(tr=>{ if(tr.dataset.id){ tr.style.cursor="pointer"; tr.onclick=()=>detail(tr.dataset.id); } });
     }
 
     function detail(id){
@@ -179,6 +211,9 @@ function statPage(leaf, schema){
              {title:"记录数",align:"right",render:r=>`<span class="num">${r.v.count}</span>`},
              isAmount?{title:"金额合计(万)",align:"right",render:r=>`<span class="num strong" style="color:#1b5fe3">${fmt.num(r.v.amount)}</span>`}:{title:"占比",align:"right",render:r=>fmt.pct(r.v.count/totalCount*100)}],
             Object.entries(groups).map(([k,v])=>({id:k,k,v})));
+        // 统计明细按项目可点击下钻
+        const nameToId={}; Store.all("projects").forEach(p=>nameToId[p.name]=p.id);
+        $$("#aggTbl .tbl tbody tr").forEach(tr=>{ const pid=nameToId[tr.dataset.id]; if(pid){ tr.style.cursor="pointer"; tr.onclick=()=>projectDetail(pid); } });
         $("#expBtn").onclick=()=>toast("演示：统计结果可导出 Excel","ok");
     }
     return { html, mount };
