@@ -4,28 +4,12 @@
 import { Store, fmt } from "./store.js";
 import { $, $$, table, badge, riskBadge, bar, modal, confirmBox, toast, options, esc } from "./ui.js";
 import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
+import { openProject360 } from "./project360.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
-/* 关联项目详情弹窗（点击任意"项目"词时下钻） */
-function projectDetail(id){
-    const p = Store.get("projects",id);
-    if(!p){ toast("未找到关联项目记录","err"); return; }
-    const g = (p.contractAmount||0)-(p.actualCost||0);
-    modal({ title:p.name, large:true, body:`<div class="detail-grid">
-        <div class="di"><span>项目编号</span><b>${p.id}</b></div>
-        <div class="di"><span>项目类型</span><b>${esc(p.type||"—")}</b></div>
-        <div class="di"><span>项目负责人</span><b>${esc(p.manager||"—")}</b></div>
-        <div class="di"><span>当前状态</span><b>${badge(p.status)}</b></div>
-        <div class="di"><span>合同金额</span><b>${fmt.money(p.contractAmount)}</b></div>
-        <div class="di"><span>实际成本</span><b>${fmt.money(p.actualCost)}</b></div>
-        <div class="di"><span>项目毛利</span><b style="color:${g>=0?'#16a34a':'#dc2626'}">${fmt.money(g)}</b></div>
-        <div class="di"><span>风险等级</span><b>${riskBadge(p.risk)}</b></div>
-        <div class="di"><span>已收款</span><b>${fmt.money(p.received)}</b></div>
-        <div class="di full"><span>回款进度</span>${bar(p.contractAmount?p.received/p.contractAmount*100:0)}</div>
-    </div>`, footer:`<button class="btn btn-light" data-close>关闭</button><button class="btn btn-primary" data-go>查看项目台账 ›</button>`,
-        onMount:(el,close)=>{ el.querySelector("[data-go]").onclick=()=>{close();location.hash="project_0_0";}; } });
-}
+/* 点击任意"项目"词 → 项目360°视图 */
+const projectDetail = openProject360;
 
 /* 字段值渲染（重要词均可点击下钻） */
 function show(field, rec){
@@ -93,8 +77,10 @@ function listPage(leaf, schema){
         $("#summary").innerHTML = `共 <b>${data.length}</b> 条`+(amtF?` · 金额合计 <b style="color:#1b5fe3">${fmt.money(data.reduce((a,r)=>a+(+r[amtF.key]||0),0))}</b>`:"");
         wire();
     }
+    // 项目集合 → 详情即"项目360°视图"
+    const openDetail = id => leaf.coll==="projects" ? projectDetail(id) : detail(id);
     function wire(){
-        $$("#viewArea [data-act='view']").forEach(b=>b.onclick=e=>{e.stopPropagation();detail(b.dataset.id);});
+        $$("#viewArea [data-act='view']").forEach(b=>b.onclick=e=>{e.stopPropagation();openDetail(b.dataset.id);});
         $$("#viewArea [data-act='edit']").forEach(b=>b.onclick=e=>{e.stopPropagation();form(b.dataset.id);});
         $$("#viewArea [data-act='del']").forEach(b=>b.onclick=e=>{e.stopPropagation();confirmBox(`确认删除该${leaf.name}记录？`,()=>{Store.remove(leaf.coll,b.dataset.id);toast("已删除");render();});});
         // 单元格内"重要词"点击下钻
@@ -102,11 +88,11 @@ function listPage(leaf, schema){
             e.stopPropagation(); const d=a.dataset;
             if(d.pid) projectDetail(d.pid);
             else if(d.fk!=null){ state.filters[d.fk]=d.fv; const sel=document.querySelector(`[data-f="${d.fk}"]`); if(sel) sel.value=d.fv; render(); toast(`已按「${d.fv}」筛选`); }
-            else if(d.detail!=null) detail(d.detail);
+            else if(d.detail!=null) openDetail(d.detail);
             else if(d.q!=null){ state.q=d.q; const qi=$("#q"); if(qi) qi.value=d.q; render(); }
         });
         // 整行点击查看详情
-        $$("#viewArea .tbl tbody tr").forEach(tr=>{ if(tr.dataset.id){ tr.style.cursor="pointer"; tr.onclick=()=>detail(tr.dataset.id); } });
+        $$("#viewArea .tbl tbody tr").forEach(tr=>{ if(tr.dataset.id){ tr.style.cursor="pointer"; tr.onclick=()=>openDetail(tr.dataset.id); } });
     }
 
     function detail(id){

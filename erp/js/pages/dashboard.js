@@ -2,6 +2,7 @@
 import { Store, Calc, fmt } from "../store.js";
 import { $, $$, modal, table, badge, riskBadge, bar, esc } from "../ui.js";
 import { lineChart, donutChart, legendHTML, PALETTE } from "../charts.js";
+import { openProject360 } from "../project360.js";
 
 /* 叶子菜单 key（用于"查看完整列表"跳转） */
 const LEAF = { projects:"project_0_0", contracts:"project_1_0", cost:"project_3_1", income:"finance_0_0" };
@@ -13,30 +14,8 @@ function go(leafKey, coll, filters){
     location.hash = leafKey;
 }
 
-/* 项目详情弹窗 */
-function projectDetail(id){
-    const p = Store.get("projects",id); if(!p) return;
-    const g = Calc.grossProfit(p);
-    modal({ title:p.name, large:true, body:`
-        <div class="detail-grid">
-            <div class="di"><span>项目编号</span><b>${p.id}</b></div>
-            <div class="di"><span>项目类型</span><b>${p.type}</b></div>
-            <div class="di"><span>项目负责人</span><b>${esc(p.manager)}</b></div>
-            <div class="di"><span>当前状态</span><b>${badge(p.status)}</b></div>
-            <div class="di"><span>合同金额</span><b>${fmt.money(p.contractAmount)}</b></div>
-            <div class="di"><span>实际成本</span><b>${fmt.money(p.actualCost)}</b></div>
-            <div class="di"><span>项目毛利</span><b style="color:${g>=0?'#16a34a':'#dc2626'}">${fmt.money(g)}（${fmt.pct(Calc.profitRate(p))}）</b></div>
-            <div class="di"><span>风险等级</span><b>${riskBadge(p.risk)}</b></div>
-            <div class="di"><span>已收款</span><b>${fmt.money(p.received)}</b></div>
-            <div class="di"><span>应收款</span><b style="color:#e8890c">${fmt.money(Calc.receivable(p))}</b></div>
-            <div class="di full"><span>回款进度</span>${bar(Calc.collectionRate(p))}</div>
-            <div class="di"><span>开工日期</span><b>${p.startDate}</b></div>
-            <div class="di"><span>计划竣工</span><b>${p.endDate}</b></div>
-        </div>`,
-        footer:`<button class="btn btn-light" data-close>关闭</button><button class="btn btn-primary" data-go>查看项目台账 ›</button>`,
-        onMount:(el,close)=>{ el.querySelector("[data-go]").onclick=()=>{close();go(LEAF.projects);}; }
-    });
-}
+/* 项目详情 → 项目360°视图 */
+const projectDetail = openProject360;
 function contractDetail(id){
     const c = Store.get("contracts",id); if(!c) return;
     modal({ title:c.name, body:`
