@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>和易云电力工程ERP · 项目经营管理平台</title>
+<link rel="stylesheet" href="css/erp.css">
+</head>
+<body>
+<div class="app">
+    <!-- 侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sb-brand">
+            <div class="sb-logo">和</div>
+            <div><b>和易云</b><small>电力工程ERP</small></div>
+        </div>
+        <nav class="sb-nav" id="sbNav"></nav>
+        <div class="sb-foot">v1.0 · 项目经营管理平台</div>
+    </aside>
+
+    <!-- 主区域 -->
+    <div class="main">
+        <header class="topbar">
+            <button class="tb-toggle" id="tbToggle">☰</button>
+            <div class="crumb"><b id="crumbTitle">经营看板</b><span id="crumbSub">数据总览</span></div>
+            <div class="tb-search"><span class="ic">🔍</span><input id="globalSearch" placeholder="搜索项目、合同、单据…"></div>
+            <div class="tb-actions">
+                <button class="tb-icon" title="通知">🔔<span class="dot"></span></button>
+                <button class="tb-icon" id="resetBtn" title="重置演示数据">↺</button>
+                <div class="tb-user">
+                    <div class="tb-avatar" id="userAvatar">管</div>
+                    <div><div class="nm" id="userName">管理员</div><div class="rl" id="userRole">系统管理员</div></div>
+                </div>
+            </div>
+        </header>
+        <main class="page" id="page"></main>
+    </div>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
