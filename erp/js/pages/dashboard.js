@@ -14,8 +14,8 @@ export default function dashboard(){
     const profitRate = totalContract? totalProfit/totalContract*100 : 0;
 
     const cost = Store.all("cost");
-    const costByType = ["人工","材料","机械","分包","其他"].map((t,i)=>({
-        label:t, value:cost.filter(c=>c.type===t).reduce((a,c)=>a+c.amount,0), color:PALETTE[i]
+    const costByType = ["人工","材料","机械","分包","间接费","其他"].map((t,i)=>({
+        label:t, value:cost.filter(c=>c.subject===t).reduce((a,c)=>a+c.amount,0), color:PALETTE[i]
     })).filter(d=>d.value>0);
 
     // 项目盈亏排行（前6）
