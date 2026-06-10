@@ -121,6 +121,9 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .kpi-val .u{font-size:14px;font-weight:600;color:var(--gray)}
 .kpi-trend{font-size:12.5px;margin-top:8px;display:flex;align-items:center;gap:5px}
 .kpi-trend.up{color:var(--green)} .kpi-trend.down{color:var(--red)}
+.kpi.link{cursor:pointer;transition:.18s} .kpi.link:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:transparent}
+#costLegend .cl{display:inline-flex;align-items:center;padding:4px 8px;border-radius:8px;transition:.15s}
+#costLegend .cl:hover{background:var(--soft)}
 
 /* ---------- 表格 ---------- */
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}

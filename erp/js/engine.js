@@ -113,10 +113,16 @@ function listPage(leaf, schema){
     }
 
     function mount(){
+        // 来自看板/其他页的预设筛选
+        try{ const ps=JSON.parse(sessionStorage.getItem("erp_preset")||"null");
+            if(ps && ps.coll===leaf.coll && ps.filters){ Object.assign(state.filters, ps.filters); }
+            sessionStorage.removeItem("erp_preset");
+        }catch(e){}
         $("#addBtn").onclick=()=>form();
         $("#impBtn").onclick=()=>toast("演示：导入功能将解析 Excel 批量入库","ok");
         $("#q").oninput=e=>{state.q=e.target.value;render();};
-        $$("[data-f]").forEach(s=>s.onchange=e=>{state.filters[s.dataset.f]=e.target.value;render();});
+        $$("[data-f]").forEach(s=>{ if(state.filters[s.dataset.f]) s.value=state.filters[s.dataset.f];
+            s.onchange=e=>{state.filters[s.dataset.f]=e.target.value;render();}; });
         const df=$("#dFrom"), dt=$("#dTo");
         if(df) df.onchange=e=>{state.dateFrom=e.target.value;render();};
         if(dt) dt.onchange=e=>{state.dateTo=e.target.value;render();};
