@@ -7,6 +7,7 @@ import { MENU, buildIndex } from "./menu.js";
 import { schemaFor } from "./schema.js";
 import { renderLeaf } from "./engine.js";
 import dashboard from "./pages/dashboard.js";
+import okr from "./pages/okr.js";
 
 /* 登录校验 */
 const user = (()=>{ try{ return JSON.parse(localStorage.getItem("heyiyun_erp_user")); }catch(e){ return null; } })();
@@ -76,7 +77,7 @@ function navigate(){
     const root = $("#page"); root.innerHTML="";
     try{
         const schema = schemaFor(leaf);
-        const view = renderLeaf(leaf, schema, dashboard);
+        const view = (schema.kind && schema.kind.indexOf("okr_")===0) ? okr(leaf, schema) : renderLeaf(leaf, schema, dashboard);
         root.innerHTML = view.html;
         if(view.mount) view.mount(root);
     }catch(err){

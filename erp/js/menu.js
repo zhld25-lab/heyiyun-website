@@ -24,6 +24,19 @@ export const MENU = [
     ]},
 ]},
 
+{ key:"okr", name:"考核", icon:"🎯", groups:[
+    { name:"OKR 管理", leaves:[
+        {n:"OKR总览", kind:"okr_overview"}, {n:"我的OKR", kind:"okr_my"},
+        {n:"目标制定", kind:"okr_objectives"}, {n:"周期管理", coll:"okr_periods"},
+    ]},
+    { name:"考核评分", leaves:[
+        {n:"自评", kind:"okr_self"}, {n:"上级评分", kind:"okr_review"}, {n:"考核结果", kind:"okr_results"},
+    ]},
+    { name:"配置", leaves:[
+        {n:"岗位OKR模板", kind:"okr_templates"}, {n:"考核规则", kind:"okr_rules"},
+    ]},
+]},
+
 { key:"project", name:"项目", icon:"🏗️", groups:[
     { name:"项目信息", leaves:[
         {n:"立项登记", coll:"projects"}, "供电报装", {n:"工程量清单", coll:"boq"},

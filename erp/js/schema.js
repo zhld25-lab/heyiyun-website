@@ -219,6 +219,8 @@ function bespoke(){
         fin_cash:[ F("direction","收支方向",{type:"select",options:["收入","支出"],badge:true,col:true,filter:true,default:"收入"}), fProject(),
             F("account","银行账户",{col:true}), fAmount("金额(万元)"), F("date","发生日期",{type:"date",col:true,date:true}),
             F("summary","摘要",{full:true,col:true}), F("remark","备注",{type:"textarea",full:true}) ],
+        okr_periods:[ F("name","周期名称",{required:true,col:true,full:true}), F("start","开始日期",{type:"date",col:true,date:true}),
+            F("end","结束日期",{type:"date",col:true}), fStatus(["未开始","进行中","已结束"],"周期状态","进行中"), F("remark","说明",{type:"textarea",full:true}) ],
     };
 }
 const BESPOKE = bespoke();
@@ -230,6 +232,7 @@ export function schemaFor(leaf){
     if(leaf.kind==="todo") return {kind:"todo"};
     if(leaf.kind==="flow") return {kind:"flow"};
     if(leaf.kind==="attendance") return {kind:"attendance"};
+    if(leaf.kind && leaf.kind.indexOf("okr_")===0) return {kind:leaf.kind};
 
     const cat = classify(leaf.name, leaf.group);
     if(leaf.kind==="stat") return { kind:"stat", cat, fields:fieldsFor(cat,leaf.name), stat:statConfig(leaf) };
