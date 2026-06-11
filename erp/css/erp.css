@@ -313,6 +313,25 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
 .sb-leaf.active{background:linear-gradient(90deg,rgba(27,95,227,.9),rgba(59,122,240,.6));color:#fff;font-weight:600}
 .sb-leaf.active::before{content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--cyan)}
 
+/* ---------- 视图切换 Tabs ---------- */
+.view-tabs{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px}
+.view-tabs button{padding:8px 18px;border-radius:8px;font-size:14px;font-weight:600;color:var(--gray);transition:.16s}
+.view-tabs button.on{background:#fff;color:var(--blue);box-shadow:var(--shadow)}
+.view-tabs button:not(.on):hover{color:var(--blue)}
+
+/* ---------- 权限勾选树 ---------- */
+.perm-tree{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.perm-mod{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.perm-mod-head{display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--soft);
+    border-bottom:1px solid var(--line-2);cursor:pointer;font-size:14.5px;color:var(--navy)}
+.perm-mod-head .perm-mod-n{margin-left:auto;font-size:11.5px;color:var(--gray-l);font-weight:600;background:#fff;border:1px solid var(--line);padding:1px 8px;border-radius:20px}
+.perm-groups{padding:8px 14px 12px}
+.perm-grp{margin-top:8px}
+.perm-grp-t{font-size:12px;color:var(--gray-l);font-weight:700;letter-spacing:.5px;margin:6px 0 5px}
+.perm-grp-leaves{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:5px 12px}
+.perm-leaf{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;padding:2px 0}
+.perm-leaf input,.perm-mod-head input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
+
 /* ---------- 全局功能搜索面板 ---------- */
 .search-panel{position:fixed;top:56px;left:50%;transform:translateX(-50%);width:520px;max-width:90vw;max-height:420px;overflow:auto;
     background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);z-index:120;display:none;padding:8px}

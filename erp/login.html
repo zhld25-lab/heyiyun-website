@@ -73,16 +73,22 @@
                 <div class="inp"><span class="ic">🔒</span><input type="password" id="password" value="123456" placeholder="密码" autocomplete="current-password"></div>
                 <div class="row"><label style="margin:0;font-weight:500"><input type="checkbox" checked style="width:auto;padding:0;margin-right:6px;vertical-align:middle"> 记住我</label><a href="#">忘记密码？</a></div>
                 <button type="submit" class="login-btn">登 录</button>
+                <div id="loginErr" style="display:none;margin-top:12px;padding:10px 13px;background:#fdeaea;border:1px solid #f5c2c2;border-radius:9px;color:#dc2626;font-size:13px"></div>
             </form>
-            <div class="demo-tip">🔑 演示账号：用户名 <b>admin</b> ，密码 <b>123456</b>（演示版数据存储于本浏览器）</div>
+            <div class="demo-tip">🔑 演示账号（密码均为 <b>123456</b>）：<br>
+                超管 <b>admin</b> · 总经理 <b>gm</b> · 总助 <b>assistant</b> · 财务 <b>finance</b> · 项目经理 <b>pm</b> · 材料员 <b>material</b><br>
+                不同角色登录后可见的功能不同；用 <b>admin</b> 登录后进入「系统 → 权限控制」可分配权限。</div>
         </div>
     </div>
-<script>
+<script type="module">
+    import { login } from "./js/auth.js";
+    const errEl=document.getElementById("loginErr");
     document.getElementById("loginForm").addEventListener("submit",function(e){
         e.preventDefault();
         const u=document.getElementById("username").value.trim();
-        if(!u){ return; }
-        localStorage.setItem("heyiyun_erp_user", JSON.stringify({name:u==="admin"?"管理员":u, role:"系统管理员", login:Date.now()}));
+        const p=document.getElementById("password").value;
+        const r=login(u,p);
+        if(!r.ok){ errEl.textContent="⚠ "+r.msg; errEl.style.display="block"; return; }
         location.href="index.html";
     });
 </script>

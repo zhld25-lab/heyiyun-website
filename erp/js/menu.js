@@ -176,6 +176,7 @@ export const MENU = [
 ]},
 
 { key:"system", name:"系统", icon:"⚙️", groups:[
+    { name:"权限控制", leaves:[ {n:"用户管理", kind:"access"}, {n:"角色权限", kind:"access"} ]},
     { name:"组织", leaves:[ "组织架构", "角色管理" ]},
     { name:"流程", leaves:[ {n:"流程设置", kind:"flow"}, {n:"流程监控", kind:"stat", src:"contracts"}, "流程移交" ]},
 ]},

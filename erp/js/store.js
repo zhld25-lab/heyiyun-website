@@ -3,6 +3,8 @@
    接后端时只需把 load/persist 换成 API 调用
    ============================================================ */
 
+import { MENU } from "./menu.js";
+
 const KEY = "heyiyun_erp_db_v4";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
@@ -188,11 +190,57 @@ function seed(){
              okr_periods, okr_objectives, okr_templates, okr_rules };
 }
 
+/* ---------- 权限：默认角色与账号（电力工程公司常见岗位） ---------- */
+// 不调用 buildIndex（避免重复改写 MENU），按相同规则就地推导各模块的叶子 key
+function leafKeysOfModules(modKeys){
+    const out=[];
+    MENU.forEach(m=>{ if(!modKeys.includes(m.key)) return;
+        m.groups.forEach((g,gi)=> g.leaves.forEach((lf,li)=> out.push(`${m.key}_${gi}_${li}`)) ); });
+    return out;
+}
+function authDefaults(){
+    const roles = [
+        {id:"R-super", name:"超级管理员", isSuper:true,  perms:[], note:"系统最高权限，可配置角色、账号与功能权限"},
+        {id:"R-gm",    name:"总经理",     isSuper:false, note:"全局经营视角（除系统设置外全部可见）",
+            perms:leafKeysOfModules(["me","decision","okr","project","sub","material","equip","turnover","finance","customer","admin","hr","doc"])},
+        {id:"R-gma",   name:"总经理助理", isSuper:false, note:"协助总经理，侧重决策辅助与行政人事协同",
+            perms:leafKeysOfModules(["me","decision","okr","customer","admin","hr","doc"])},
+        {id:"R-fin",   name:"财务经理",   isSuper:false, note:"财务资金、收付款、发票与业财一体化",
+            perms:leafKeysOfModules(["me","decision","finance","doc"])},
+        {id:"R-pm",    name:"项目经理",   isSuper:false, note:"项目执行：进度、分包、材料、设备、周材",
+            perms:leafKeysOfModules(["me","project","sub","material","equip","turnover"])},
+        {id:"R-mat",   name:"材料员",     isSuper:false, note:"材料计划、采购、库存",
+            perms:leafKeysOfModules(["me","material"])},
+    ];
+    const users = [
+        {id:"U-admin", username:"admin",     name:"超级管理员",      password:"123456", roleId:"R-super", status:"启用"},
+        {id:"U-gm",    username:"gm",        name:"张总（总经理）",  password:"123456", roleId:"R-gm",    status:"启用"},
+        {id:"U-gma",   username:"assistant", name:"李助理",          password:"123456", roleId:"R-gma",   status:"启用"},
+        {id:"U-fin",   username:"finance",   name:"周敏（财务经理）",password:"123456", roleId:"R-fin",   status:"启用"},
+        {id:"U-pm",    username:"pm",        name:"张建国（项目经理）",password:"123456", roleId:"R-pm",  status:"启用"},
+        {id:"U-mat",   username:"material",  name:"孙倩（材料员）",  password:"123456", roleId:"R-mat",   status:"启用"},
+    ];
+    return { roles, users };
+}
+// 非破坏性注入：缺失才补，已存在的角色/账号与其它业务数据均不动
+function ensureAuth(data){
+    if(!Array.isArray(data.sys_roles) || !data.sys_roles.length || !Array.isArray(data.sys_users) || !data.sys_users.length){
+        const a = authDefaults();
+        if(!Array.isArray(data.sys_roles) || !data.sys_roles.length) data.sys_roles = a.roles;
+        if(!Array.isArray(data.sys_users) || !data.sys_users.length) data.sys_users = a.users;
+    }
+    return data;
+}
+
 let db = load();
 const subs = [];
 function load(){
-    try{ const raw=localStorage.getItem(KEY); if(raw) return JSON.parse(raw); }catch(e){}
-    const s=seed(); localStorage.setItem(KEY, JSON.stringify(s)); return s;
+    let data=null;
+    try{ const raw=localStorage.getItem(KEY); if(raw) data=JSON.parse(raw); }catch(e){}
+    if(!data) data=seed();
+    ensureAuth(data);
+    localStorage.setItem(KEY, JSON.stringify(data));
+    return data;
 }
 function persist(){ localStorage.setItem(KEY, JSON.stringify(db)); subs.forEach(fn=>fn(db)); }
 
@@ -202,7 +250,7 @@ export const Store = {
     add(coll,rec){ if(!db[coll]) db[coll]=[]; if(!rec.id) rec.id=uid(coll.slice(0,2).toUpperCase()); db[coll].unshift(rec); persist(); return rec; },
     update(coll,id,patch){ const r=(db[coll]||[]).find(x=>x.id===id); if(r)Object.assign(r,patch); persist(); return r; },
     remove(coll,id){ if(db[coll]) db[coll]=db[coll].filter(r=>r.id!==id); persist(); },
-    reset(){ db=seed(); persist(); },
+    reset(){ db=ensureAuth(seed()); persist(); },
     subscribe(fn){ subs.push(fn); },
     newId:uid,
 };
