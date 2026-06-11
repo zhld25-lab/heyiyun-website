@@ -31,4 +31,11 @@ export function canLeaf(key){
     return !!(r && Array.isArray(r.perms) && r.perms.includes(key));
 }
 
+/** 是否有审批权（总经理 / 超级管理员）——单据"批准/驳回"只对其开放 */
+export function canApprove(){
+    if(isSuper()) return true;
+    const u=currentUser();
+    return !!(u && u.roleId==="R-gm");
+}
+
 export function logout(){ localStorage.removeItem(SESS); }

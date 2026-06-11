@@ -8,7 +8,7 @@ export const MENU = [
 { key:"me", name:"个人", icon:"🙋", groups:[
     { name:"我的工作", leaves:[
         {n:"待办事项", kind:"todo"}, {n:"已办事项", kind:"todo"}, {n:"知会事项", kind:"todo"},
-        {n:"我的考勤", kind:"stat"}, {n:"我的薪资", kind:"stat"},
+        {n:"我的考勤", kind:"stat"}, {n:"我的薪资", kind:"my_salary"},
         {n:"修改密码", kind:"special:password"}, {n:"逻辑图", kind:"special:diagram"},
     ]},
 ]},
@@ -132,7 +132,7 @@ export const MENU = [
 { key:"finance", name:"财务", icon:"💰", groups:[
     { name:"收款管理", leaves:[ {n:"承包合同收款", coll:"fin_income"}, "其他收款" ]},
     { name:"付款管理", leaves:[
-        "分包付款", "材料采购付款", "设备采购付款", "设备租赁付款", "周材采购付款", "周材租赁付款", "薪资付款", "其他付款",
+        "分包付款", "材料采购付款", "设备采购付款", "设备租赁付款", "周材采购付款", "周材租赁付款", {n:"薪资付款", coll:"fin_salary"}, "其他付款",
     ]},
     { name:"发票管理", leaves:[
         "承包合同开票", "分包合同收票", "材料采购收票", "设备采购收票", "设备租赁收票",
@@ -168,7 +168,7 @@ export const MENU = [
     { name:"考勤管理", leaves:[
         "请假申请", "出差申请", {n:"考勤记录", kind:"attendance"}, {n:"考勤统计", kind:"stat", src:"hr_attend"}, "班时设置", "工作日设置",
     ]},
-    { name:"薪资管理", leaves:[ "薪资发布" ]},
+    { name:"薪资管理", leaves:[ {n:"薪资发布", coll:"fin_salary"} ]},
 ]},
 
 { key:"doc", name:"资料", icon:"📁", groups:[

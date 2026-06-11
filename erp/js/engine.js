@@ -5,6 +5,7 @@ import { Store, fmt } from "./store.js";
 import { $, $$, table, badge, riskBadge, bar, modal, confirmBox, toast, options, esc } from "./ui.js";
 import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
 import { openProject360 } from "./project360.js";
+import { currentUser, canApprove } from "./auth.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
@@ -98,11 +99,20 @@ function listPage(leaf, schema){
     function detail(id){
         const r = Store.get(leaf.coll,id); if(!r) return;
         const items = fields.map(f=>({label:f.label, value:f.full&&f.type==="textarea"?esc(r[f.key]||"—"):show(f,r), full:f.full}));
+        // 审批动作：仅总经理/超管，且单据处于待审批状态
+        const hasApproval = fields.some(f=>f.key==="approval");
+        const approvable = hasApproval && canApprove() && ["待审批","审批中","草稿"].includes(r.approval);
         modal({ title:`${leaf.name}详情`, large:true,
             body:`<div class="detail-grid">${items.map(it=>`<div class="di ${it.full?'full':''}"><span>${it.label}</span><b>${it.value}</b></div>`).join("")}
-                <div class="di full"><span>单据编号</span><b>${r.id}</b></div></div>`,
-            footer:`<button class="btn btn-light" data-close>关闭</button><button class="btn btn-primary" data-edit>编辑</button>`,
-            onMount:(el,close)=>{ el.querySelector("[data-edit]").onclick=()=>{close();form(id);}; }
+                <div class="di full"><span>单据编号</span><b>${r.id}</b></div></div>
+                ${hasApproval&&!approvable&&["待审批","审批中","草稿"].includes(r.approval)?'<p class="okr-tip" style="margin-top:12px">⏳ 该单据等待总经理审批后方可继续办理</p>':""}`,
+            footer:`<button class="btn btn-light" data-close>关闭</button>
+                ${approvable?'<button class="btn btn-danger" data-reject>驳回</button><button class="btn btn-primary" data-approve>批准</button>':'<button class="btn btn-primary" data-edit>编辑</button>'}`,
+            onMount:(el,close)=>{
+                const ed=el.querySelector("[data-edit]"); if(ed) ed.onclick=()=>{close();form(id);};
+                const ap=el.querySelector("[data-approve]"); if(ap) ap.onclick=()=>{ Store.update(leaf.coll,id,{approval:"已批准"}); toast("已批准，单据可继续办理"); close(); render(); };
+                const rj=el.querySelector("[data-reject]"); if(rj) rj.onclick=()=>{ Store.update(leaf.coll,id,{approval:"已驳回"}); toast("已驳回","err"); close(); render(); };
+            }
         });
     }
 
@@ -111,6 +121,8 @@ function listPage(leaf, schema){
         const body = `<div class="form-grid">${fields.map(f=>{
             const v = r[f.key]!=null?r[f.key]:(f.default!=null?f.default:"");
             const cls = f.full?"field full":"field";
+            // 锁定字段（如审批状态）：只显示，不可改 —— 审批须走"详情/待办"中的批准/驳回
+            if(f.noEdit) return `<div class="${cls}"><label>${f.label}</label><div style="padding:9px 2px">${f.badge?badge(v||f.default):esc(v||f.default)} <small style="color:#8b93a7">（新建自动"待审批"，由总经理审批）</small></div></div>`;
             if(f.type==="select") return `<div class="${cls}"><label>${f.label}${f.required?' <span class="req">*</span>':''}</label><select class="select" data-k="${f.key}">${options(f.options||[],v)}</select></div>`;
             if(f.type==="textarea") return `<div class="${cls}"><label>${f.label}</label><textarea data-k="${f.key}" placeholder="${f.placeholder||''}">${esc(v)}</textarea></div>`;
             return `<div class="${cls}"><label>${f.label}${f.required?' <span class="req">*</span>':''}</label><input class="input" type="${f.type||'text'}" data-k="${f.key}" value="${esc(v)}" placeholder="${f.placeholder||''}"></div>`;
@@ -119,12 +131,20 @@ function listPage(leaf, schema){
             footer:`<button class="btn btn-light" data-close>取消</button><button class="btn btn-primary" data-save>保存</button>`,
             onMount:(el,close)=>{ el.querySelector("[data-save]").onclick=()=>{
                 const data={};
-                for(const f of fields){ const node=el.querySelector(`[data-k="${f.key}"]`); let val=node.value;
+                for(const f of fields){
+                    if(f.noEdit){ data[f.key] = id ? (r[f.key]!=null?r[f.key]:f.default) : f.default; continue; }
+                    const node=el.querySelector(`[data-k="${f.key}"]`); let val=node.value;
                     if(f.type==="number") val=+val||0;
                     if(f.required && !String(val).trim()){ toast(`请填写${f.label}`,"err"); return; }
                     data[f.key]=val; }
+                // 业务约束：单据未获批准前，不允许标记"已付款"
+                if(fields.some(f=>f.key==="approval") && data.status==="已付款" && data.approval!=="已批准"){
+                    toast("该单据尚未批准，不能标记为已付款","err"); return;
+                }
+                // 记录提交人，便于待办追溯
+                const u=currentUser(); if(u && !id) data.submitter=u.name;
                 if(id){ Store.update(leaf.coll,id,data); toast("已更新"); }
-                else { Store.add(leaf.coll,data); toast("已创建"); }
+                else { Store.add(leaf.coll,data); toast(fields.some(f=>f.key==="approval")?"已创建，已提交总经理审批":"已创建"); }
                 close(); render();
             }; }
         });
@@ -210,19 +230,20 @@ function statPage(leaf, schema){
 const TODO_COLLS = [
     {c:"contracts", label:"承包合同"}, {c:"subcontracts", label:"分包合同"},
     {c:"cost", label:"成本登记"}, {c:"fin_income", label:"合同收款"},
+    {c:"fin_salary", label:"薪资付款"},
 ];
 const PENDING = ["待审批","审批中","草稿"];
 const DONE_AP = ["已批准","已驳回"];
 function normDoc(c, label, r){
-    return { coll:c, label, id:r.id, name:r.name||r.code||r.id, project:r.project,
+    return { coll:c, label, id:r.id, name:r.name||(c==="fin_salary"?`${r.party||""} ${r.period||""}薪资`.trim():null)||r.code||r.id, project:r.project,
         party:r.partyA||r.party||"", amount:r.amount, date:r.date||r.signedDate||"",
-        approval:r.approval||"待审批", status:r.status||"", submitter:r.manager||r.reporter||r.applicant||"系统" };
+        approval:r.approval||"待审批", status:r.status||"", submitter:r.submitter||r.manager||r.reporter||r.applicant||"系统" };
 }
 function todoPage(leaf){
     const mode = /已办/.test(leaf.name) ? "done" : /知会/.test(leaf.name) ? "notify" : "todo";
     const meta = {
-        todo:{ desc:"待我审批办理的单据", dot:"📋", go:"去办理 ›", empty:"暂无待办事项，所有单据均已处理 🎉",
-               filter:d=>PENDING.includes(d.approval), actionable:true },
+        todo:{ desc:canApprove()?"待我审批办理的单据":"我提交的在途单据（等待总经理审批）", dot:"📋", go:canApprove()?"去办理 ›":"查看 ›", empty:"暂无待办事项，所有单据均已处理 🎉",
+               filter:d=>PENDING.includes(d.approval), actionable:canApprove() },
         done:{ desc:"我已审批处理的单据", dot:"✅", go:"查看 ›", empty:"暂无已办事项",
                filter:d=>DONE_AP.includes(d.approval), actionable:false },
         notify:{ desc:"需知会关注的资金 / 业务动态", dot:"🔔", go:"查看 ›", empty:"暂无知会事项",
@@ -442,11 +463,45 @@ function flowPage(leaf){
 }
 
 /* ---------- 入口 ---------- */
+/* ---------- 我的薪资：读取财务"薪资付款"(fin_salary)中属于当前用户的记录 ---------- */
+function mySalaryPage(leaf){
+    const u = currentUser() || {name:""};
+    const mine = () => Store.all("fin_salary").filter(r=>{
+        const p = String(r.party||"").trim(); if(!p) return false;
+        return p===u.name || p===u.username || u.name.includes(p) || p.includes(u.name);
+    });
+    function render(){
+        const list = mine();
+        const paid = list.filter(r=>r.status==="已付款");
+        const totalPaid = paid.reduce((a,r)=>a+(+r.amount||0),0);
+        const pending = list.filter(r=>r.status!=="已付款");
+        $("#salKpis").innerHTML = `
+        <div class="kpi b-green"><div class="kpi-top"><div class="kpi-ic">💴</div><div class="kpi-label">累计实发</div></div><div class="kpi-val">${fmt.money(totalPaid)}</div></div>
+        <div class="kpi b-blue"><div class="kpi-top"><div class="kpi-ic">📄</div><div class="kpi-label">发放笔数</div></div><div class="kpi-val">${paid.length}<span class="u"> 笔</span></div></div>
+        <div class="kpi b-orange"><div class="kpi-top"><div class="kpi-ic">⏳</div><div class="kpi-label">待发放</div></div><div class="kpi-val">${pending.length}<span class="u"> 笔</span></div></div>
+        <div class="kpi b-purple"><div class="kpi-top"><div class="kpi-ic">🗓️</div><div class="kpi-label">最近发放</div></div><div class="kpi-val" style="font-size:18px">${(paid[0]&&paid[0].date)||"—"}</div></div>`;
+        $("#salTbl").innerHTML = table([
+            {title:"薪资月份",render:r=>`<span class="strong">${esc(r.period||"—")}</span>`},
+            {title:"金额(万元)",align:"right",render:r=>`<span class="num strong" style="color:#16a34a">${fmt.num(r.amount)}</span>`},
+            {title:"付款方式",render:r=>esc(r.method||"—")},
+            {title:"付款日期",align:"center",render:r=>r.date||"—"},
+            {title:"审批状态",align:"center",render:r=>badge(r.approval||"待审批")},
+            {title:"发放状态",align:"center",render:r=>badge(r.status||"待付款")},
+        ], list);
+    }
+    const html = `<div class="page-head"><div><h1>我的薪资</h1><p>个人 · ${esc(u.name)} 的薪资发放记录（由财务"薪资付款"自动同步）</p></div></div>
+    <div class="kpi-grid" id="salKpis"></div>
+    <div class="card"><div class="card-head"><h3>发放明细</h3><span class="sub">仅本人可见</span></div>
+        <div class="card-body" style="padding-top:6px"><div id="salTbl"></div></div></div>`;
+    return { html, mount(){ render(); } };
+}
+
 export function renderLeaf(leaf, schema, dashboard){
     switch(schema.kind){
         case "dashboard": return dashboard();
         case "stat": return statPage(leaf, schema);
         case "todo": return todoPage(leaf);
+        case "my_salary": return mySalaryPage(leaf);
         case "transfer": return bankTransferPage(leaf);
         case "password": return passwordPage(leaf);
         case "diagram": return diagramPage(leaf);

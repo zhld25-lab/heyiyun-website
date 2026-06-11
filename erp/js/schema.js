@@ -16,7 +16,8 @@ const fProject = () => F("project","所属项目",{type:"select",options:projOpt
 const fParty   = (label="往来单位") => F("party",label,{col:true,filter:true});
 const fAmount  = (label="金额(万元)") => F("amount",label,{type:"number",money:true,col:true,align:"right"});
 const fDate    = (label="单据日期") => F("date",label,{type:"date",col:true,date:true});
-const fApproval= () => F("approval","审批状态",{type:"select",options:APPROVAL,badge:true,col:true,filter:true,default:"草稿"});
+/* 审批状态：表单中只读（noEdit）——新建自动"待审批"，批准/驳回须由有权人在详情/待办中操作 */
+const fApproval= () => F("approval","审批状态",{type:"select",options:APPROVAL,badge:true,col:true,filter:true,default:"待审批",noEdit:true});
 const fStatus  = (opts,label="业务状态",def) => F("status",label,{type:"select",options:opts,badge:true,col:true,filter:true,default:def||opts[0]});
 const tail = () => [ F("attachments","附件",{type:"text",placeholder:"附件名称/数量"}),
                      F("remark","备注",{type:"textarea",full:true}),
@@ -221,6 +222,13 @@ function bespoke(){
             F("summary","摘要",{full:true,col:true}), F("remark","备注",{type:"textarea",full:true}) ],
         okr_periods:[ F("name","周期名称",{required:true,col:true,full:true}), F("start","开始日期",{type:"date",col:true,date:true}),
             F("end","结束日期",{type:"date",col:true}), fStatus(["未开始","进行中","已结束"],"周期状态","进行中"), F("remark","说明",{type:"textarea",full:true}) ],
+        fin_salary:[ F("party","收款人（员工姓名）",{required:true,col:true,filter:true}),
+            F("period","薪资月份",{col:true,placeholder:"如 2026-06"}), fProject(),
+            fAmount("薪资金额(万元)"), F("method","付款方式",{type:"select",options:["银行转账","现金","其他"]}),
+            F("date","付款日期",{type:"date",col:true,date:true}),
+            F("approval","审批状态",{type:"select",options:APPROVAL,badge:true,col:true,filter:true,default:"待审批",noEdit:true}),
+            fStatus(["待付款","已付款"],"付款状态","待付款"),
+            F("remark","备注",{type:"textarea",full:true}) ],
     };
 }
 const BESPOKE = bespoke();
@@ -235,6 +243,7 @@ export function schemaFor(leaf){
     if(leaf.kind==="transfer") return {kind:"transfer"};
     if(leaf.kind==="flow") return {kind:"flow"};
     if(leaf.kind==="attendance") return {kind:"attendance"};
+    if(leaf.kind==="my_salary") return {kind:"my_salary"};
     if(leaf.kind && leaf.kind.indexOf("okr_")===0) return {kind:leaf.kind};
 
     const cat = classify(leaf.name, leaf.group);
