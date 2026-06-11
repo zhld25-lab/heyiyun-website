@@ -3,7 +3,7 @@
    接后端时只需把 load/persist 换成 API 调用
    ============================================================ */
 
-const KEY = "heyiyun_erp_db_v3";
+const KEY = "heyiyun_erp_db_v4";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
 function seed(){
@@ -61,6 +61,18 @@ function seed(){
         {id:uid("XJ"), direction:"收入", project:"P-2402", account:"基本户", amount:1800, date:"2026-04-25", summary:"工程进度款第二期"},
         {id:uid("XJ"), direction:"支出", project:"P-2407", account:"一般户", amount:3200, date:"2026-04-28", summary:"GIS设备预付款"},
         {id:uid("XJ"), direction:"支出", project:"P-2402", account:"基本户", amount:900, date:"2026-05-08", summary:"分包进度款"},
+    ];
+    /* ---------- 银行账户 + 内部转账（一笔过账，双账户联动） ---------- */
+    const bank_accounts = [
+        {id:"ACC-01", name:"基本户", bank:"中国工商银行武汉临空港支行", account:"6212 2602 0001 8866", balance:3860, currency:"人民币", remark:"公司基本结算账户"},
+        {id:"ACC-02", name:"一般户", bank:"中国建设银行武汉黄陂支行", account:"4367 4201 0055 2233", balance:1240, currency:"人民币", remark:"日常付款一般户"},
+        {id:"ACC-03", name:"项目专户", bank:"中国农业银行武汉分行", account:"6228 4800 1234 5678", balance:920, currency:"人民币", remark:"500kV扩建项目专用"},
+        {id:"ACC-04", name:"农民工工资专户", bank:"中国银行武汉东西湖支行", account:"6217 8500 9900 1122", balance:560, currency:"人民币", remark:"农民工工资专项支付"},
+    ];
+    const bank_transfers = [
+        {id:"ZZ-2026-001", from:"ACC-01", to:"ACC-03", amount:500, date:"2026-05-22", summary:"拨付500kV项目专户用款", status:"已完成"},
+        {id:"ZZ-2026-002", from:"ACC-01", to:"ACC-04", amount:300, date:"2026-06-02", summary:"农民工工资专户资金补充", status:"已完成"},
+        {id:"ZZ-2026-003", from:"ACC-02", to:"ACC-01", amount:200, date:"2026-06-08", summary:"一般户结余归集至基本户", status:"已完成"},
     ];
     /* ---------- OKR 考核（电力工程真实岗位案例） ---------- */
     const okr_periods = [
@@ -172,6 +184,7 @@ function seed(){
     ];
 
     return { projects, contracts, subcontracts, boq, progress, cost, fin_income, fin_cash,
+             bank_accounts, bank_transfers,
              okr_periods, okr_objectives, okr_templates, okr_rules };
 }
 

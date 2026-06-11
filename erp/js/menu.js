@@ -145,7 +145,7 @@ export const MENU = [
         "投标保证金", "联营投标保证金", "履约保证金", {n:"履约保证金管理", kind:"stat", src:"fin_bond_perf"},
         "分包保证金", {n:"分包保证金管理", kind:"stat", src:"fin_bond_sub"},
     ]},
-    { name:"银行账户", leaves:[ "银行账户", "收支登记" ]},
+    { name:"银行账户", leaves:[ {n:"银行账户", coll:"bank_accounts"}, {n:"内部转账", kind:"transfer"}, "收支登记" ]},
 ]},
 
 { key:"customer", name:"客户", icon:"🧑‍💼", groups:[

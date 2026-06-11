@@ -230,6 +230,7 @@ export function schemaFor(leaf){
     if(leaf.kind==="special:password") return {kind:"password"};
     if(leaf.kind==="special:diagram") return {kind:"diagram"};
     if(leaf.kind==="todo") return {kind:"todo"};
+    if(leaf.kind==="transfer") return {kind:"transfer"};
     if(leaf.kind==="flow") return {kind:"flow"};
     if(leaf.kind==="attendance") return {kind:"attendance"};
     if(leaf.kind && leaf.kind.indexOf("okr_")===0) return {kind:leaf.kind};

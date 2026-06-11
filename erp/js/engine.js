@@ -206,18 +206,185 @@ function statPage(leaf, schema){
 }
 
 /* ---------- 特殊页 ---------- */
+/* 待办 / 已办 / 知会：可点击办理的工作台 */
+const TODO_COLLS = [
+    {c:"contracts", label:"承包合同"}, {c:"subcontracts", label:"分包合同"},
+    {c:"cost", label:"成本登记"}, {c:"fin_income", label:"合同收款"},
+];
+const PENDING = ["待审批","审批中","草稿"];
+const DONE_AP = ["已批准","已驳回"];
+function normDoc(c, label, r){
+    return { coll:c, label, id:r.id, name:r.name||r.code||r.id, project:r.project,
+        party:r.partyA||r.party||"", amount:r.amount, date:r.date||r.signedDate||"",
+        approval:r.approval||"待审批", status:r.status||"", submitter:r.manager||r.reporter||r.applicant||"系统" };
+}
 function todoPage(leaf){
-    // 汇总各业务集合中待审批单据
-    const colls=["contracts","subcontracts","cost","fin_income"];
-    const pend=[];
-    colls.forEach(c=>Store.all(c).forEach(r=>{ if(["待审批","审批中","草稿"].includes(r.approval)) pend.push({c,r}); }));
-    const html=`<div class="page-head"><div><h1>${esc(leaf.name)}</h1><p>个人 · 我的工作台</p></div></div>
-    <div class="card"><div class="card-head"><h3>${leaf.name}列表</h3><span class="sub">共 ${pend.length} 项</span></div>
-    <div class="card-body"><div class="feed">${pend.length?pend.map(({c,r})=>`
-        <div class="feed-item"><div class="feed-dot" style="background:#e7efff">📋</div>
-        <div class="ct"><div class="t">${esc(r.name||r.code||r.id)}</div><div class="d">${esc(projName(r.project))} · ${badge(r.approval||"待审批")}</div></div>
-        <div class="tm">${r.date||r.signedDate||""}</div></div>`).join(""):'<div class="empty"><div class="ic">✅</div>暂无待办事项</div>'}</div></div></div>`;
-    return { html, mount(){} };
+    const mode = /已办/.test(leaf.name) ? "done" : /知会/.test(leaf.name) ? "notify" : "todo";
+    const meta = {
+        todo:{ desc:"待我审批办理的单据", dot:"📋", go:"去办理 ›", empty:"暂无待办事项，所有单据均已处理 🎉",
+               filter:d=>PENDING.includes(d.approval), actionable:true },
+        done:{ desc:"我已审批处理的单据", dot:"✅", go:"查看 ›", empty:"暂无已办事项",
+               filter:d=>DONE_AP.includes(d.approval), actionable:false },
+        notify:{ desc:"需知会关注的资金 / 业务动态", dot:"🔔", go:"查看 ›", empty:"暂无知会事项",
+                 filter:d=>["已到账","已付款","已完成"].includes(d.status), actionable:false },
+    }[mode];
+
+    function collect(){
+        const out=[];
+        TODO_COLLS.forEach(({c,label})=>Store.all(c).forEach(r=>{ const d=normDoc(c,label,r); if(meta.filter(d)) out.push(d); }));
+        return out;
+    }
+
+    function openDoc(d){
+        // 高级字段：横向排列
+        const top = [
+            {label:"单据类型", value:badge(d.label)},
+            {label:"单据编号", value:esc(d.id)},
+            {label:"金额(万元)", value:d.amount!=null&&d.amount!==""?fmt.money(d.amount):"—"},
+            {label:"当前状态", value:badge(d.approval||d.status)},
+        ];
+        // 明细字段：纵向排列
+        const rows = [
+            {label:"单据名称", value:esc(d.name)},
+            {label:"所属项目", value:esc(projName(d.project))},
+            {label:"相对方 / 对象", value:esc(d.party||"—")},
+            {label:"提交人", value:esc(d.submitter)},
+            {label:"单据日期", value:esc(d.date||"—")},
+        ];
+        const body = `<div class="todo-form">
+            <div class="todo-top">${top.map(t=>`<div class="cell"><span>${t.label}</span><b>${t.value}</b></div>`).join("")}</div>
+            <div class="todo-rows">${rows.map(r=>`<div class="r"><span>${r.label}</span><div class="v">${r.value}</div></div>`).join("")}
+            ${meta.actionable?`<div class="r full"><span>审批意见</span><div class="v"><textarea id="apOpinion" placeholder="请填写审批 / 办理意见（选填）"></textarea></div></div>`:""}
+            </div></div>`;
+        const footer = meta.actionable
+            ? `<button class="btn btn-light" data-close>取消</button>
+               <button class="btn btn-danger" data-reject>退回驳回</button>
+               <button class="btn btn-primary" data-approve>同意通过</button>`
+            : `<button class="btn btn-light" data-close>关闭</button>`;
+        modal({ title:`办理 · ${d.name}`, large:true, body, footer,
+            onMount:(el,close)=>{
+                const ap=el.querySelector("[data-approve]"), rj=el.querySelector("[data-reject]");
+                if(ap) ap.onclick=()=>{ Store.update(d.coll,d.id,{approval:"已批准"}); toast("已同意通过，单据进入下一环节","ok"); close(); render(); };
+                if(rj) rj.onclick=()=>{ Store.update(d.coll,d.id,{approval:"已驳回"}); toast("已退回驳回","err"); close(); render(); };
+            }
+        });
+    }
+
+    function render(){
+        const list = collect();
+        const feed = $("#todoFeed");
+        feed.innerHTML = list.length ? list.map((d,i)=>`
+            <div class="feed-item todo-item" data-i="${i}">
+                <div class="feed-dot" style="background:#e7efff">${meta.dot}</div>
+                <div class="ct"><div class="t">${esc(d.name)}</div>
+                    <div class="d">${badge(d.label)} · ${esc(projName(d.project))} · ${badge(d.approval||d.status)}${d.amount!=null&&d.amount!==""?` · <b style="color:#1b5fe3">${fmt.money(d.amount)}</b>`:""}</div></div>
+                <div class="tm">${esc(d.date||"")}<br><span class="todo-go">${meta.go}</span></div>
+            </div>`).join("") : `<div class="empty"><div class="ic">✅</div>${meta.empty}</div>`;
+        const cnt=$("#todoCount"); if(cnt) cnt.textContent=list.length;
+        $$("#todoFeed .todo-item").forEach(it=>it.onclick=()=>openDoc(list[+it.dataset.i]));
+    }
+
+    const html=`<div class="page-head"><div><h1>${esc(leaf.name)}</h1><p>个人 · 我的工作台 · ${meta.desc}</p></div></div>
+    <div class="card"><div class="card-head"><h3>${esc(leaf.name)}列表</h3><span class="sub">共 <b id="todoCount">0</b> 项</span></div>
+    <div class="card-body"><div class="feed" id="todoFeed"></div></div></div>`;
+    return { html, mount(){ render(); } };
+}
+
+/* 银行内部转账：一笔过账，转出 / 转入双账户自动联动 */
+function bankTransferPage(leaf){
+    const accObj = id => Store.get("bank_accounts",id);
+    const accName = id => { const a=accObj(id); return a?a.name:id; };
+    const today = () => { try{ return new Date().toISOString().slice(0,10); }catch(e){ return ""; } };
+
+    const html=`
+    <div class="page-head"><div><h1>${esc(leaf.name)}</h1><p>财务 · 银行账户 · 内部资金调拨（一笔过账，转出转入双账户自动联动）</p></div>
+        <div class="actions"><button class="btn btn-primary" id="tfAdd"><span class="ic">⇄</span>发起转账</button></div></div>
+    <div class="kpi-grid" id="tfKpi"></div>
+    <div class="card mb"><div class="card-head"><h3>银行账户余额</h3><span class="sub">点击账户查看资金往来</span></div>
+        <div class="card-body"><div class="acc-cards" id="accCards"></div></div></div>
+    <div class="card"><div class="card-head"><h3>内部转账流水</h3><span class="sub">一笔记录贯通转出 / 转入两个账户</span></div>
+        <div class="card-body"><div id="tfList"></div></div></div>`;
+
+    function openLedger(id){
+        const a=accObj(id); if(!a) return;
+        const moves=[];
+        Store.all("bank_transfers").forEach(t=>{
+            if(t.from===id) moves.push({date:t.date, dir:"转出", other:accName(t.to), amount:-t.amount, summary:t.summary});
+            if(t.to===id)   moves.push({date:t.date, dir:"转入", other:accName(t.from), amount:+t.amount, summary:t.summary});
+        });
+        moves.sort((x,y)=>x.date<y.date?-1:1);
+        const body=`<div class="todo-top">
+            <div class="cell"><span>账户名称</span><b>${esc(a.name)}</b></div>
+            <div class="cell"><span>开户行</span><b>${esc(a.bank)}</b></div>
+            <div class="cell"><span>当前余额</span><b style="color:#1b5fe3">${fmt.money(a.balance)}</b></div></div>
+            <h4 style="margin:18px 0 8px;font-size:14px;color:#0a1733">资金往来流水</h4>
+            ${moves.length?table([
+                {title:"日期",key:"date"},
+                {title:"方向",align:"center",render:m=>badge(m.dir)},
+                {title:"对方账户",render:m=>esc(m.other)},
+                {title:"金额(万)",align:"right",render:m=>`<span class="num strong" style="color:${m.amount>0?'#16a34a':'#dc2626'}">${m.amount>0?'+':''}${fmt.num(m.amount)}</span>`},
+                {title:"摘要",render:m=>esc(m.summary||"")},
+            ], moves.map((m,i)=>Object.assign({id:i},m))):'<div class="empty"><div class="ic">📭</div>该账户暂无内部资金往来</div>'}`;
+        modal({ title:`账户资金流水 · ${a.name}`, large:true, body, footer:`<button class="btn btn-light" data-close>关闭</button>` });
+    }
+
+    function openForm(){
+        const accounts = Store.all("bank_accounts");
+        const opts = accounts.map(a=>({value:a.id,label:`${a.name}（余额 ${fmt.num(a.balance)}万）`}));
+        const body=`<div class="form-grid">
+            <div class="field"><label>转出账户 <span class="req">*</span></label><select class="select" data-k="from">${options(opts,accounts[0]&&accounts[0].id)}</select></div>
+            <div class="field"><label>转入账户 <span class="req">*</span></label><select class="select" data-k="to">${options(opts,accounts[1]&&accounts[1].id)}</select></div>
+            <div class="field"><label>转账金额(万元) <span class="req">*</span></label><input class="input" type="number" data-k="amount" placeholder="0.0"></div>
+            <div class="field"><label>转账日期</label><input class="input" type="date" data-k="date" value="${today()}"></div>
+            <div class="field full"><label>摘要</label><input class="input" type="text" data-k="summary" placeholder="如：拨付项目专户用款"></div>
+        </div><div class="tf-hint">💡 <b>一笔过账</b>：保存后系统自动从转出账户扣减、转入账户增加，无需再分别登记两笔流水，两个账户的资金流动全程连通。</div>`;
+        modal({ title:"发起内部转账", large:true, body,
+            footer:`<button class="btn btn-light" data-close>取消</button><button class="btn btn-primary" data-save>确认转账</button>`,
+            onMount:(el,close)=>{
+                el.querySelector("[data-save]").onclick=()=>{
+                    const g=k=>el.querySelector(`[data-k="${k}"]`).value;
+                    const from=g("from"), to=g("to"), amount=+g("amount")||0, date=g("date")||today(), summary=g("summary");
+                    if(from===to){ toast("转出与转入账户不能相同","err"); return; }
+                    if(amount<=0){ toast("请输入有效转账金额","err"); return; }
+                    const fromAcc=accObj(from);
+                    if(amount>fromAcc.balance){ toast(`转出账户余额不足（当前 ${fmt.num(fromAcc.balance)}万）`,"err"); return; }
+                    const id="ZZ-"+Store.newId("").slice(1,6);
+                    Store.add("bank_transfers",{id,from,to,amount,date,summary,status:"已完成"});
+                    Store.update("bank_accounts",from,{balance:+(fromAcc.balance-amount).toFixed(2)});
+                    const toAcc=accObj(to);
+                    Store.update("bank_accounts",to,{balance:+(toAcc.balance+amount).toFixed(2)});
+                    toast(`转账完成：${accName(from)} → ${accName(to)} ¥${fmt.num(amount)}万，双方余额已自动更新`,"ok");
+                    close(); render();
+                };
+            }
+        });
+    }
+
+    function render(){
+        const accounts=Store.all("bank_accounts"), transfers=Store.all("bank_transfers");
+        const totalBal=accounts.reduce((a,r)=>a+(+r.balance||0),0);
+        const tfAmt=transfers.reduce((a,r)=>a+(+r.amount||0),0);
+        $("#tfKpi").innerHTML=`
+            <div class="kpi b-blue"><div class="kpi-top"><div class="kpi-ic">🏦</div><div class="kpi-label">资金总额</div></div><div class="kpi-val">${fmt.money(totalBal)}</div></div>
+            <div class="kpi b-green"><div class="kpi-top"><div class="kpi-ic">💳</div><div class="kpi-label">银行账户</div></div><div class="kpi-val">${accounts.length}<span class="u"> 个</span></div></div>
+            <div class="kpi b-orange"><div class="kpi-top"><div class="kpi-ic">⇄</div><div class="kpi-label">内部转账</div></div><div class="kpi-val">${transfers.length}<span class="u"> 笔</span></div></div>
+            <div class="kpi b-purple"><div class="kpi-top"><div class="kpi-ic">📊</div><div class="kpi-label">累计调拨</div></div><div class="kpi-val">${fmt.money(tfAmt)}</div></div>`;
+        $("#accCards").innerHTML=accounts.map(a=>`
+            <div class="acc-card" data-id="${a.id}">
+                <div class="ac-top"><span class="ac-name">${esc(a.name)}</span><span class="ac-cur">${esc(a.currency||"人民币")}</span></div>
+                <div class="ac-bal">${fmt.money(a.balance)}</div>
+                <div class="ac-bank">${esc(a.bank)}</div><div class="ac-no">${esc(a.account)}</div></div>`).join("");
+        $$("#accCards .acc-card").forEach(c=>c.onclick=()=>openLedger(c.dataset.id));
+        $("#tfList").innerHTML=transfers.length?`<div class="tf-flow">${transfers.map(t=>`
+            <div class="tf-row" data-id="${t.id}">
+                <div class="tf-end out"><i>转出账户</i><b>${esc(accName(t.from))}</b></div>
+                <div class="tf-mid"><span class="tf-amt">¥${fmt.num(t.amount)}万</span><div class="tf-arrow">●───────▶</div><small>${esc(t.date)} · ${esc(t.id)}</small></div>
+                <div class="tf-end in"><i>转入账户</i><b>${esc(accName(t.to))}</b></div>
+                <div class="tf-sum">${esc(t.summary||"")} <span class="badge bg-green">${esc(t.status||"已完成")}</span></div></div>`).join("")}</div>`
+            :'<div class="empty"><div class="ic">📭</div>暂无内部转账记录，点击右上角"发起转账"</div>';
+    }
+
+    return { html, mount(){ render(); $("#tfAdd").onclick=openForm; } };
 }
 
 function passwordPage(leaf){
@@ -280,6 +447,7 @@ export function renderLeaf(leaf, schema, dashboard){
         case "dashboard": return dashboard();
         case "stat": return statPage(leaf, schema);
         case "todo": return todoPage(leaf);
+        case "transfer": return bankTransferPage(leaf);
         case "password": return passwordPage(leaf);
         case "diagram": return diagramPage(leaf);
         case "attendance": return attendancePage(leaf);
