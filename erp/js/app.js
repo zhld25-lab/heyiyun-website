@@ -11,6 +11,7 @@ import dashboard from "./pages/dashboard.js";
 import okr from "./pages/okr.js";
 import access from "./pages/access.js";
 import certalarm, { certStats, daysHtml } from "./pages/certalarm.js";
+import { ensureSeedFlows } from "./flow.js";
 
 /* 登录校验：未登录或角色失效 → 回登录页 */
 const user = currentUser();
@@ -199,6 +200,7 @@ const logoutBtn=$("#logoutBtn"); if(logoutBtn) logoutBtn.addEventListener("click
 const navMask=$("#navMask"); if(navMask) navMask.addEventListener("click",()=>document.querySelector(".app").classList.remove("navopen"));
 
 /* ---------- 启动 ---------- */
+ensureSeedFlows();   // 给历史种子单据补挂审批流（真实提交人/流向），幂等
 buildRail();
 buildTabbar();
 setupSearch();

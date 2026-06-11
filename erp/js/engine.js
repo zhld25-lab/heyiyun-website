@@ -6,7 +6,7 @@ import { $, $$, table, badge, riskBadge, bar, modal, confirmBox, toast, options,
 import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
 import { openProject360 } from "./project360.js";
 import { currentUser, canApprove, isSuper } from "./auth.js";
-import { startFlow, currentStep, canActOn, approveStep, rejectStep, resubmitFlow, timelineHTML, stageLabel } from "./flow.js";
+import { startFlow, currentStep, canActOn, approveStep, rejectStep, resubmitFlow, timelineHTML, stageLabel, currentApproverName } from "./flow.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
@@ -269,7 +269,7 @@ const DONE_AP = ["已批准","已驳回"];
 function normDoc(c, label, r){
     return { coll:c, label, id:r.id, name:r.name||(c==="fin_salary"?`${r.party||""} ${r.period||""}薪资`.trim():null)||r.code||r.id, project:r.project,
         party:r.partyA||r.party||"", amount:r.amount, date:r.date||r.signedDate||"",
-        approval:r.approval||"待审批", status:r.status||"", submitter:r.submitter||r.manager||r.reporter||r.applicant||"系统" };
+        approval:r.approval||"待审批", status:r.status||"", submitter:(r.flow&&r.flow.submitter)||r.submitter||r.manager||r.reporter||r.applicant||"系统" };
 }
 function todoPage(leaf){
     const mode = /已办/.test(leaf.name) ? "done" : /知会/.test(leaf.name) ? "notify" : "todo";
@@ -307,15 +307,23 @@ function todoPage(leaf){
             {label:"金额(万元)", value:d.amount!=null&&d.amount!==""?fmt.money(d.amount):"—"},
             {label:"当前状态", value:badge(d.approval||d.status)},
         ];
+        const rec = d.rec || Store.get(d.coll, d.id);
+        // 当前在谁那里审批（提交给谁）
+        let handleVal;
+        if(rec&&rec.flow){
+            if(rec.flow.status==="approved") handleVal = '<b style="color:#16a34a">已全部审批通过</b>';
+            else if(rec.flow.status==="rejected") handleVal = '<b style="color:#dc2626">已驳回，退回提交人</b>';
+            else { const who=currentApproverName(rec); handleVal = `${esc(stageLabel(rec))}${who?` · <b style="color:#1b5fe3">${esc(who)}</b>`:""}`; }
+        } else handleVal = badge(d.approval);
         // 明细字段：纵向排列
         const rows = [
             {label:"单据名称", value:esc(d.name)},
             {label:"所属项目", value:esc(projName(d.project))},
             {label:"相对方 / 对象", value:esc(d.party||"—")},
             {label:"提交人", value:esc(d.submitter)},
+            {label:"当前处理 / 提交至", value:handleVal},
             {label:"单据日期", value:esc(d.date||"—")},
         ];
-        const rec = d.rec || Store.get(d.coll, d.id);
         const actionable = mode==="todo" && (rec&&rec.flow ? canActOn(rec) : canApprove());
         const body = `<div class="todo-form">
             <div class="todo-top">${top.map(t=>`<div class="cell"><span>${t.label}</span><b>${t.value}</b></div>`).join("")}</div>

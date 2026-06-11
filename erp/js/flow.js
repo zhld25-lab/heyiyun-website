@@ -106,3 +106,48 @@ export function stageLabel(rec){
     const s=currentStep(rec);
     return s ? `待${s.name}审批` : "审批中";
 }
+
+/* ---------- 当前审批人（具体的人，办理窗显示"提交给谁"） ---------- */
+function repName(roleId){ const u=Store.all("sys_users").find(x=>x.roleId===roleId); return u?u.name:roleId; }
+/** 当前轮到办理这张单的具体人名；流程结束返回 "" */
+export function currentApproverName(rec){ const s=currentStep(rec); return s?repName(s.roleId):""; }
+
+/* ---------- 历史种子单据补挂审批流（一次性、幂等） ----------
+   让旧单据也有真实"提交人"和"提交给谁"的流向，不再显示"系统" */
+const SEED_SUBMITTERS = { contracts:"U-pm", subcontracts:"U-pm", cost:"U-mat", fin_income:"U-pm", fin_salary:"U-fin" };
+function phaseOf(coll, r){
+    if(r.approval==="已驳回") return "rejected";
+    if(r.approval==="已批准") return "approved";
+    if(coll==="cost")       return r.status==="已付款" ? "approved" : "pending";
+    if(coll==="fin_income") return r.status==="已到账" ? "approved" : "pending";
+    if(coll==="fin_salary") return (r.status==="已发放"||r.status==="已付款") ? "approved" : "pending";
+    return "pending";   // 含 审批中 / 无审批字段
+}
+function buildClosedFlow(coll, rec, submitter, rejected){
+    const def=defFor(coll); if(!def||!def.steps) return null;
+    const amount=+rec.amount||0; const at=rec.signedDate||rec.date||"";
+    let steps=def.steps.filter(s=>!s.minAmount||amount>=+s.minAmount)
+        .map(s=>({roleId:s.roleId,name:s.name,status:"approved",by:repName(s.roleId),at,opinion:"同意"}));
+    if(submitter) steps=steps.map(s=> s.roleId===submitter.roleId
+        ? Object.assign(s,{status:"skipped",by:submitter.name,opinion:"提交人本级，自动通过"}) : s);
+    if(rejected && steps.length) Object.assign(steps[steps.length-1],{status:"rejected",opinion:"退回修改"});
+    return { defId:def.id, defName:def.name, stepIndex:steps.length, steps,
+        status: rejected?"rejected":"approved",
+        submitter:submitter?submitter.name:"", submitterRole:submitter?submitter.roleId:"", submittedAt:at };
+}
+export function ensureSeedFlows(){
+    Object.keys(SEED_SUBMITTERS).forEach(coll=>{
+        const submitter = Store.get("sys_users", SEED_SUBMITTERS[coll]);
+        Store.all(coll).forEach(r=>{
+            if(r.flow) return;                       // 已有流程的（含新建/已迁移）跳过
+            const phase=phaseOf(coll,r);
+            if(phase==="pending"){
+                const flow=startFlow(coll, r, submitter);
+                if(flow) Store.update(coll, r.id, { flow, approval: flow.status==="approved"?"已批准":"审批中" });
+            } else {
+                const flow=buildClosedFlow(coll, r, submitter, phase==="rejected");
+                if(flow) Store.update(coll, r.id, { flow });
+            }
+        });
+    });
+}
