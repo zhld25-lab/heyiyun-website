@@ -26,7 +26,15 @@ function buildRail(){
     $$("#modRail .rail-item").forEach(it=>it.onclick=()=>{
         const m = MENU.find(x=>x.key===it.dataset.mod);
         const first = m.groups[0].leaves[0].key;
-        location.hash = first;
+        if(window.innerWidth<=768){
+            // 移动端：点顶部模块 → 展开该模块的二级菜单抽屉，由用户再选具体功能
+            activeModuleKey = m.key;
+            $$("#modRail .rail-item").forEach(x=>x.classList.toggle("active", x===it));
+            buildSidebar(m.key, null);
+            document.querySelector(".app").classList.add("navopen");
+        } else {
+            location.hash = first;
+        }
     });
 }
 
