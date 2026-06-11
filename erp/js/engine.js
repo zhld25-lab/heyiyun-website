@@ -5,7 +5,8 @@ import { Store, fmt } from "./store.js";
 import { $, $$, table, badge, riskBadge, bar, modal, confirmBox, toast, options, esc } from "./ui.js";
 import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
 import { openProject360 } from "./project360.js";
-import { currentUser, canApprove } from "./auth.js";
+import { currentUser, canApprove, isSuper } from "./auth.js";
+import { startFlow, currentStep, canActOn, approveStep, rejectStep, resubmitFlow, timelineHTML, stageLabel } from "./flow.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
@@ -99,19 +100,36 @@ function listPage(leaf, schema){
     function detail(id){
         const r = Store.get(leaf.coll,id); if(!r) return;
         const items = fields.map(f=>({label:f.label, value:f.full&&f.type==="textarea"?esc(r[f.key]||"—"):show(f,r), full:f.full}));
-        // 审批动作：仅总经理/超管，且单据处于待审批状态
         const hasApproval = fields.some(f=>f.key==="approval");
-        const approvable = hasApproval && canApprove() && ["待审批","审批中","草稿"].includes(r.approval);
+        // 流程化单据：按"当前级是否轮到我"决定能否办理
+        const flowable = hasApproval && r.flow;
+        const actable = flowable ? canActOn(r) : (hasApproval && canApprove() && ["待审批","审批中","草稿"].includes(r.approval));
+        const step = flowable ? currentStep(r) : null;
+        const mine = (()=>{ const u=currentUser(); return u && r.flow && r.flow.submitter===u.name; })();
+        const rejected = flowable && r.flow.status==="rejected";
         modal({ title:`${leaf.name}详情`, large:true,
             body:`<div class="detail-grid">${items.map(it=>`<div class="di ${it.full?'full':''}"><span>${it.label}</span><b>${it.value}</b></div>`).join("")}
                 <div class="di full"><span>单据编号</span><b>${r.id}</b></div></div>
-                ${hasApproval&&!approvable&&["待审批","审批中","草稿"].includes(r.approval)?'<p class="okr-tip" style="margin-top:12px">⏳ 该单据等待总经理审批后方可继续办理</p>':""}`,
+                ${flowable?`<div style="margin-top:14px"><div style="font-size:13px;font-weight:700;color:#0a1733;margin-bottom:8px">审批流程 · ${esc(r.flow.defName||"")}</div>${timelineHTML(r)}</div>`:""}
+                ${flowable&&step&&!actable?`<p class="okr-tip" style="margin-top:10px">⏳ 当前等待「${esc(step.name)}」办理</p>`:""}
+                ${actable?'<div class="field" style="margin-top:12px"><label>审批意见（选填）</label><textarea id="flowOpinion" placeholder="同意/驳回原因…"></textarea></div>':""}`,
             footer:`<button class="btn btn-light" data-close>关闭</button>
-                ${approvable?'<button class="btn btn-danger" data-reject>驳回</button><button class="btn btn-primary" data-approve>批准</button>':'<button class="btn btn-primary" data-edit>编辑</button>'}`,
+                ${actable?'<button class="btn btn-danger" data-reject>驳回</button><button class="btn btn-primary" data-approve>批准</button>':''}
+                ${rejected&&mine?'<button class="btn btn-primary" data-resubmit>修改后重新提交</button>':''}
+                ${!actable&&!rejected?'<button class="btn btn-primary" data-edit>编辑</button>':''}`,
             onMount:(el,close)=>{
+                const op=()=>{ const t=el.querySelector("#flowOpinion"); return t?t.value.trim():""; };
                 const ed=el.querySelector("[data-edit]"); if(ed) ed.onclick=()=>{close();form(id);};
-                const ap=el.querySelector("[data-approve]"); if(ap) ap.onclick=()=>{ Store.update(leaf.coll,id,{approval:"已批准"}); toast("已批准，单据可继续办理"); close(); render(); };
-                const rj=el.querySelector("[data-reject]"); if(rj) rj.onclick=()=>{ Store.update(leaf.coll,id,{approval:"已驳回"}); toast("已驳回","err"); close(); render(); };
+                const ap=el.querySelector("[data-approve]"); if(ap) ap.onclick=()=>{
+                    if(r.flow) approveStep(leaf.coll, r, op());
+                    else Store.update(leaf.coll,id,{approval:"已批准"});
+                    const nxt=currentStep(Store.get(leaf.coll,id));
+                    toast(nxt?`本级已通过，流转至「${nxt.name}」`:"全部审批通过 ✔"); close(); render(); };
+                const rj=el.querySelector("[data-reject]"); if(rj) rj.onclick=()=>{
+                    if(r.flow) rejectStep(leaf.coll, r, op());
+                    else Store.update(leaf.coll,id,{approval:"已驳回"});
+                    toast("已驳回，单据打回提交人","err"); close(); render(); };
+                const rs=el.querySelector("[data-resubmit]"); if(rs) rs.onclick=()=>{ close(); form(id); };
             }
         });
     }
@@ -141,10 +159,24 @@ function listPage(leaf, schema){
                 if(fields.some(f=>f.key==="approval") && data.status==="已付款" && data.approval!=="已批准"){
                     toast("该单据尚未批准，不能标记为已付款","err"); return;
                 }
-                // 记录提交人，便于待办追溯
                 const u=currentUser(); if(u && !id) data.submitter=u.name;
-                if(id){ Store.update(leaf.coll,id,data); toast("已更新"); }
-                else { Store.add(leaf.coll,data); toast(fields.some(f=>f.key==="approval")?"已创建，已提交总经理审批":"已创建"); }
+                const hasAp = fields.some(f=>f.key==="approval");
+                if(id){
+                    Store.update(leaf.coll,id,data);
+                    // 被驳回的单据修改保存 → 流程重置重新提交
+                    const cur=Store.get(leaf.coll,id);
+                    if(hasAp && cur.flow && cur.flow.status==="rejected"){ resubmitFlow(leaf.coll, cur); toast("已重新提交，流程重新流转"); }
+                    else toast("已更新");
+                } else {
+                    const rec=Store.add(leaf.coll,data);
+                    if(hasAp){
+                        const flow=startFlow(leaf.coll, rec, u);
+                        if(flow){ Store.update(leaf.coll, rec.id, { flow, approval: flow.status==="approved"?"已批准":"待审批" });
+                            const s=flow.status==="running"?flow.steps[flow.stepIndex]:null;
+                            toast(s?`已创建，流转至「${s.name}」审批`:"已创建并自动通过"); }
+                        else toast("已创建");
+                    } else toast("已创建");
+                }
                 close(); render();
             }; }
         });
@@ -241,18 +273,29 @@ function normDoc(c, label, r){
 }
 function todoPage(leaf){
     const mode = /已办/.test(leaf.name) ? "done" : /知会/.test(leaf.name) ? "notify" : "todo";
+    const u = currentUser()||{name:"",roleId:""};
     const meta = {
-        todo:{ desc:canApprove()?"待我审批办理的单据":"我提交的在途单据（等待总经理审批）", dot:"📋", go:canApprove()?"去办理 ›":"查看 ›", empty:"暂无待办事项，所有单据均已处理 🎉",
-               filter:d=>PENDING.includes(d.approval), actionable:canApprove() },
-        done:{ desc:"我已审批处理的单据", dot:"✅", go:"查看 ›", empty:"暂无已办事项",
-               filter:d=>DONE_AP.includes(d.approval), actionable:false },
-        notify:{ desc:"需知会关注的资金 / 业务动态", dot:"🔔", go:"查看 ›", empty:"暂无知会事项",
-                 filter:d=>["已到账","已付款","已完成"].includes(d.status), actionable:false },
+        todo:{ desc:"轮到我办理的单据（按审批流程动态流转）", dot:"📋", go:"去办理 ›", empty:"暂无待办事项，所有单据均已处理 🎉" },
+        done:{ desc:"我已审批处理过的单据", dot:"✅", go:"查看 ›", empty:"暂无已办事项" },
+        notify:{ desc:"我提交的单据进展 + 资金动态", dot:"🔔", go:"查看 ›", empty:"暂无知会事项" },
     }[mode];
 
+    function pick(d, r){
+        if(mode==="todo"){
+            if(r.flow) return canActOn(r);                                  // 流程单：当前级轮到我（超管可代办）
+            return canApprove() && PENDING.includes(d.approval);            // 旧单据兼容
+        }
+        if(mode==="done"){
+            if(r.flow) return r.flow.steps.some(s=>s.by===u.name && (s.status==="approved"||s.status==="rejected"));
+            return canApprove() && DONE_AP.includes(d.approval);
+        }
+        // notify：我提交的在途/办结单据 + 已到账/已付款动态
+        if(r.flow && r.flow.submitter===u.name) return true;
+        return ["已到账","已付款","已完成"].includes(d.status);
+    }
     function collect(){
         const out=[];
-        TODO_COLLS.forEach(({c,label})=>Store.all(c).forEach(r=>{ const d=normDoc(c,label,r); if(meta.filter(d)) out.push(d); }));
+        TODO_COLLS.forEach(({c,label})=>Store.all(c).forEach(r=>{ const d=normDoc(c,label,r); if(pick(d,r)){ d.rec=r; out.push(d); } }));
         return out;
     }
 
@@ -272,21 +315,33 @@ function todoPage(leaf){
             {label:"提交人", value:esc(d.submitter)},
             {label:"单据日期", value:esc(d.date||"—")},
         ];
+        const rec = d.rec || Store.get(d.coll, d.id);
+        const actionable = mode==="todo" && (rec&&rec.flow ? canActOn(rec) : canApprove());
         const body = `<div class="todo-form">
             <div class="todo-top">${top.map(t=>`<div class="cell"><span>${t.label}</span><b>${t.value}</b></div>`).join("")}</div>
+            ${rec&&rec.flow?`<div style="margin:4px 0 14px"><div style="font-size:13px;font-weight:700;color:#0a1733;margin-bottom:8px">审批流程 · ${esc(rec.flow.defName||"")}</div>${timelineHTML(rec)}</div>`:""}
             <div class="todo-rows">${rows.map(r=>`<div class="r"><span>${r.label}</span><div class="v">${r.value}</div></div>`).join("")}
-            ${meta.actionable?`<div class="r full"><span>审批意见</span><div class="v"><textarea id="apOpinion" placeholder="请填写审批 / 办理意见（选填）"></textarea></div></div>`:""}
+            ${actionable?`<div class="r full"><span>审批意见</span><div class="v"><textarea id="apOpinion" placeholder="请填写审批 / 办理意见（选填）"></textarea></div></div>`:""}
             </div></div>`;
-        const footer = meta.actionable
+        const footer = actionable
             ? `<button class="btn btn-light" data-close>取消</button>
                <button class="btn btn-danger" data-reject>退回驳回</button>
                <button class="btn btn-primary" data-approve>同意通过</button>`
             : `<button class="btn btn-light" data-close>关闭</button>`;
         modal({ title:`办理 · ${d.name}`, large:true, body, footer,
             onMount:(el,close)=>{
+                const op=()=>{ const t=el.querySelector("#apOpinion"); return t?t.value.trim():""; };
                 const ap=el.querySelector("[data-approve]"), rj=el.querySelector("[data-reject]");
-                if(ap) ap.onclick=()=>{ Store.update(d.coll,d.id,{approval:"已批准"}); toast("已同意通过，单据进入下一环节","ok"); close(); render(); };
-                if(rj) rj.onclick=()=>{ Store.update(d.coll,d.id,{approval:"已驳回"}); toast("已退回驳回","err"); close(); render(); };
+                if(ap) ap.onclick=()=>{
+                    if(rec&&rec.flow){ approveStep(d.coll, rec, op());
+                        const nxt=currentStep(Store.get(d.coll,d.id));
+                        toast(nxt?`本级已通过，流转至「${nxt.name}」`:"全部审批通过 ✔"); }
+                    else { Store.update(d.coll,d.id,{approval:"已批准"}); toast("已同意通过"); }
+                    close(); render(); };
+                if(rj) rj.onclick=()=>{
+                    if(rec&&rec.flow) rejectStep(d.coll, rec, op());
+                    else Store.update(d.coll,d.id,{approval:"已驳回"});
+                    toast("已退回驳回","err"); close(); render(); };
             }
         });
     }
@@ -298,7 +353,7 @@ function todoPage(leaf){
             <div class="feed-item todo-item" data-i="${i}">
                 <div class="feed-dot" style="background:#e7efff">${meta.dot}</div>
                 <div class="ct"><div class="t">${esc(d.name)}</div>
-                    <div class="d">${badge(d.label)} · ${esc(projName(d.project))} · ${badge(d.approval||d.status)}${d.amount!=null&&d.amount!==""?` · <b style="color:#1b5fe3">${fmt.money(d.amount)}</b>`:""}</div></div>
+                    <div class="d">${badge(d.label)} · ${esc(projName(d.project))} · <span class="badge ${d.rec&&d.rec.flow&&d.rec.flow.status==='rejected'?'bg-red':d.rec&&d.rec.flow&&d.rec.flow.status==='approved'?'bg-green':'bg-orange'}">${esc(stageLabel(d.rec)||d.approval||d.status)}</span>${d.amount!=null&&d.amount!==""?` · <b style="color:#1b5fe3">${fmt.money(d.amount)}</b>`:""}</div></div>
                 <div class="tm">${esc(d.date||"")}<br><span class="todo-go">${meta.go}</span></div>
             </div>`).join("") : `<div class="empty"><div class="ic">✅</div>${meta.empty}</div>`;
         const cnt=$("#todoCount"); if(cnt) cnt.textContent=list.length;
@@ -453,13 +508,66 @@ function attendancePage(leaf){
     return listPage(leaf, {kind:"list", fields});
 }
 
+/* 流程设置：配置每类单据的逐级审批链（驱动整个审批流引擎） */
 function flowPage(leaf){
-    const fields=[
-        {key:"docType",label:"单据类型",col:true,required:true,filter:true,type:"select",options:["承包合同","分包合同","付款单","收款单","报销单","采购合同"]},
-        {key:"level1",label:"一级审批人",col:true},{key:"level2",label:"二级审批人",col:true},
-        {key:"level3",label:"三级审批人",col:true},{key:"status",label:"启用状态",type:"select",options:["启用","停用"],badge:true,col:true,filter:true,default:"启用"},
-        {key:"remark",label:"说明",type:"textarea",full:true}];
-    return listPage(leaf, {kind:"list", fields});
+    const COLL_NAMES = {fin_salary:"薪资付款", cost:"成本/报销", contracts:"承包合同", subcontracts:"分包合同", fin_income:"合同收款", "*":"其它全部单据"};
+    const roleOpts = () => Store.all("sys_roles").filter(r=>!r.isSuper).map(r=>({value:r.id,label:r.name}));
+    function render(){
+        const defs = Store.all("sys_flows");
+        $("#flowList").innerHTML = defs.map(d=>`
+        <div class="card mb"><div class="card-head"><h3>${esc(d.name)}</h3>
+            <span class="sub">适用：${(d.colls||[]).map(c=>COLL_NAMES[c]||c).join("、")}</span></div>
+        <div class="card-body">
+            <div class="flow-timeline" style="margin-bottom:14px">
+                <div class="fstep done"><div class="fdot">✎</div><div class="finfo"><b>提交</b><span>经办人</span></div></div>
+                <div class="fline"></div>
+                ${(d.steps||[]).map((s,i)=>`<div class="fstep cur" style="--i:${i}"><div class="fdot">${i+1}</div>
+                    <div class="finfo"><b>${esc(s.name)}</b>${s.minAmount?`<small>≥${s.minAmount}万才需此级</small>`:"<span>逐级审批</span>"}</div></div>`).join('<div class="fline"></div>')}
+                <div class="fline"></div>
+                <div class="fstep done"><div class="fdot">🏁</div><div class="finfo"><b>通过</b></div></div>
+            </div>
+            <button class="btn btn-light btn-sm" data-edit="${d.id}">⚙ 编辑流程</button>
+        </div></div>`).join("");
+        $$("#flowList [data-edit]").forEach(b=>b.onclick=()=>editDef(b.dataset.edit));
+    }
+    function editDef(id){
+        const d = Store.get("sys_flows", id);
+        const steps = JSON.parse(JSON.stringify(d.steps||[]));
+        const row = (s={},i)=>`<div class="kr-edit" data-i="${i}" style="grid-template-columns:1.4fr 1fr 32px">
+            <select class="select" data-k="roleId">${options(roleOpts(), s.roleId||"R-gm")}</select>
+            <input class="input" type="number" data-k="minAmount" placeholder="金额门槛(万,可空)" value="${s.minAmount||""}">
+            <button class="kr-del" data-del>✕</button></div>`;
+        modal({ title:`编辑流程 · ${d.name}`, large:true,
+            body:`<p class="okr-tip" style="margin-bottom:14px">单据将按以下顺序逐级流转，上一级批准后自动到达下一级；填了金额门槛的级别，仅当单据金额达到门槛时才参与审批。</p>
+                <div class="kr-editor"><div class="kr-editor-head"><b>审批级别（自上而下）</b><button class="btn btn-light btn-sm" id="addStep">＋ 加一级</button></div>
+                <div id="stepRows">${steps.map((s,i)=>row(s,i)).join("")}</div></div>`,
+            footer:`<button class="btn btn-light" data-close>取消</button><button class="btn btn-primary" data-save>保存流程</button>`,
+            onMount:(el,close)=>{
+                const rowsEl=el.querySelector("#stepRows"); let idx=steps.length;
+                const bindDel=()=>el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>b.closest(".kr-edit").remove());
+                el.querySelector("#addStep").onclick=()=>{ rowsEl.insertAdjacentHTML("beforeend", row({},idx++)); bindDel(); };
+                bindDel();
+                el.querySelector("[data-save]").onclick=()=>{
+                    const roles = Store.all("sys_roles");
+                    const newSteps = Array.from(rowsEl.querySelectorAll(".kr-edit")).map(r=>{
+                        const roleId=r.querySelector('[data-k="roleId"]').value;
+                        const role=roles.find(x=>x.id===roleId);
+                        const mv=r.querySelector('[data-k="minAmount"]').value;
+                        const st={roleId, name:role?role.name:roleId};
+                        if(mv) st.minAmount=+mv;
+                        return st;
+                    });
+                    if(!newSteps.length){ toast("至少保留一级审批","err"); return; }
+                    Store.update("sys_flows", id, {steps:newSteps});
+                    toast("流程已保存，新建单据即按新流程流转"); close(); render();
+                };
+            }
+        });
+    }
+    const html=`<div class="page-head"><div><h1>流程设置</h1><p>系统 · 配置各类单据的逐级审批链（员工→经理→总经理…）</p></div></div>
+        <p class="okr-tip" style="margin-bottom:16px">💡 审批流引擎说明：新建单据自动进入流程第一级 → 该级角色的「待办事项」出现此单 → 批准后自动流向下一级 → 全部通过即「已批准」；任一级驳回则打回提交人，修改后可重新提交。</p>
+        <div id="flowList"></div>`;
+    return { html, mount(){ render(); } };
 }
 
 /* ---------- 入口 ---------- */

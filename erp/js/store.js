@@ -258,6 +258,26 @@ function ensureCerts(data){
     if(!Array.isArray(data.certs) || !data.certs.length){ data.certs = seed().certs; }
     return data;
 }
+/* 审批流程定义（可在 系统→流程设置 中修改）
+   steps 按顺序逐级流转；minAmount 表示金额(万元)达到该值才需要这一级 */
+function flowDefaults(){
+    return [
+        {id:"FL-salary", name:"薪资付款审批", colls:["fin_salary"],
+         steps:[{roleId:"R-gm", name:"总经理"}]},
+        {id:"FL-cost", name:"成本/报销审批", colls:["cost"],
+         steps:[{roleId:"R-pm", name:"项目经理"},{roleId:"R-fin", name:"财务经理"},{roleId:"R-gm", name:"总经理", minAmount:100}]},
+        {id:"FL-contract", name:"合同审批", colls:["contracts","subcontracts"],
+         steps:[{roleId:"R-fin", name:"财务经理"},{roleId:"R-gm", name:"总经理"}]},
+        {id:"FL-income", name:"收款确认", colls:["fin_income"],
+         steps:[{roleId:"R-fin", name:"财务经理"}]},
+        {id:"FL-default", name:"通用审批", colls:["*"],
+         steps:[{roleId:"R-gm", name:"总经理"}]},
+    ];
+}
+function ensureFlows(data){
+    if(!Array.isArray(data.sys_flows) || !data.sys_flows.length){ data.sys_flows = flowDefaults(); }
+    return data;
+}
 
 let db = load();
 const subs = [];
@@ -267,6 +287,7 @@ function load(){
     if(!data) data=seed();
     ensureAuth(data);
     ensureCerts(data);
+    ensureFlows(data);
     localStorage.setItem(KEY, JSON.stringify(data));
     return data;
 }
@@ -278,7 +299,7 @@ export const Store = {
     add(coll,rec){ if(!db[coll]) db[coll]=[]; if(!rec.id) rec.id=uid(coll.slice(0,2).toUpperCase()); db[coll].unshift(rec); persist(); return rec; },
     update(coll,id,patch){ const r=(db[coll]||[]).find(x=>x.id===id); if(r)Object.assign(r,patch); persist(); return r; },
     remove(coll,id){ if(db[coll]) db[coll]=db[coll].filter(r=>r.id!==id); persist(); },
-    reset(){ db=ensureCerts(ensureAuth(seed())); persist(); },
+    reset(){ db=ensureFlows(ensureCerts(ensureAuth(seed()))); persist(); },
     subscribe(fn){ subs.push(fn); },
     newId:uid,
 };
