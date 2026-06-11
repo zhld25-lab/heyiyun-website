@@ -1,7 +1,7 @@
 /* ============================================================
    应用入口：登录校验 + 模块图标轨 + 分组手风琴 + 路由
    ============================================================ */
-import { $, $$, esc, toast } from "./ui.js";
+import { $, $$, esc, toast, modal } from "./ui.js";
 import { Store } from "./store.js";
 import { MENU, buildIndex } from "./menu.js";
 import { schemaFor } from "./schema.js";
@@ -10,6 +10,7 @@ import { currentUser, currentRole, isSuper, canLeaf, logout } from "./auth.js";
 import dashboard from "./pages/dashboard.js";
 import okr from "./pages/okr.js";
 import access from "./pages/access.js";
+import certalarm, { certStats, daysHtml } from "./pages/certalarm.js";
 
 /* 登录校验：未登录或角色失效 → 回登录页 */
 const user = currentUser();
@@ -108,6 +109,7 @@ function navigate(){
     try{
         const schema = schemaFor(leaf);
         const view = schema.kind==="access" ? access(leaf, schema)
+                   : schema.kind==="certalarm" ? certalarm(leaf, schema)
                    : (schema.kind && schema.kind.indexOf("okr_")===0) ? okr(leaf, schema)
                    : renderLeaf(leaf, schema, dashboard);
         root.innerHTML = view.html;
@@ -118,6 +120,32 @@ function navigate(){
     }
     root.scrollTop=0;
     document.querySelector(".app").classList.remove("navopen");
+    certBell();
+}
+
+/* ---------- 证书到期报警（全局铃铛，所有角色可见） ---------- */
+const certLeaf = Object.values(INDEX.leaves).find(l=>l.kind==="certalarm");
+function certBell(){
+    const btn=$("#bellBtn"), dot=$("#bellDot"); if(!btn) return;
+    const s=certStats();
+    if(s.alarm>0){ dot.style.display="grid"; dot.textContent=s.alarm>99?"99+":s.alarm; dot.classList.add("badge-num"); btn.classList.add("bell-alarm"); }
+    else { dot.style.display="none"; dot.classList.remove("badge-num"); btn.classList.remove("bell-alarm"); }
+    btn.onclick=openCertPanel;
+}
+function openCertPanel(){
+    const s=certStats();
+    const items=s.list.filter(c=>["expired","urgent","warn"].includes(c.lv.key));
+    const body = items.length ? `<div class="notif-list">${items.map(c=>`
+        <div class="notif-item"><div class="ni-ic">${c.lv.key==="expired"?"⛔":c.lv.key==="urgent"?"⏰":"🔔"}</div>
+            <div class="ni-main"><div class="ni-t">${esc(c.name)}</div><div class="ni-d">${esc(c.category||"")} · ${esc(c.holder||"")} · 到期 ${esc(c.expiry||"—")}</div></div>
+            <div class="ni-r"><span class="badge ${c.lv.cls}">${c.lv.label}</span><div style="margin-top:4px">${daysHtml(c.lv)}</div></div>
+        </div>`).join("")}</div>`
+        : '<div class="empty"><div class="ic">✅</div>暂无即将到期或已过期的证书</div>';
+    const canView = certLeaf && canLeaf(certLeaf.key);
+    modal({ title:`证书到期预警 · ${s.expired}过期 / ${s.urgent}紧急 / ${s.warn}预警`, large:true, body,
+        footer:`${canView?'<button class="btn btn-primary" data-go>查看证书台账</button>':''}<button class="btn btn-light" data-close>关闭</button>`,
+        onMount:(el,close)=>{ const g=el.querySelector("[data-go]"); if(g) g.onclick=()=>{ close(); location.hash=certLeaf.key; }; }
+    });
 }
 
 /* ---------- 全局功能搜索 ---------- */
@@ -146,3 +174,6 @@ const logoutBtn=$("#logoutBtn"); if(logoutBtn) logoutBtn.addEventListener("click
 buildRail();
 setupSearch();
 navigate();
+certBell();
+// 登录后证书到期提醒
+(()=>{ const s=certStats(); if(s.expired||s.urgent){ setTimeout(()=>toast(`⚠ ${s.expired} 张证书已过期、${s.urgent} 张30天内到期，请及时处理`,"err"),600); } })();

@@ -185,8 +185,30 @@ function seed(){
          note:"考核以激励与成长为导向，鼓励设定有挑战性的目标；评分由员工自评(30%)与上级评分(70%)双向沟通确认，关注目标达成过程而非简单结果，不以末位淘汰为目的。"},
     ];
 
+    /* ---------- 资质证书（带到期日，用于到期报警） ---------- */
+    const certs = [
+        // 公司资质
+        {id:"ZS-001", name:"安全生产许可证", category:"公司资质", holder:"恒达电力工程有限公司", certNo:"(鄂)JZ安许证字[2023]0xxxx", issuer:"湖北省住建厅", issueDate:"2023-07-06", expiry:"2026-07-05", remark:"到期前30天需办理延期"},
+        {id:"ZS-002", name:"电力工程施工总承包三级资质", category:"公司资质", holder:"恒达电力工程有限公司", certNo:"D342xxxxxxxx", issuer:"湖北省住建厅", issueDate:"2022-03-21", expiry:"2027-03-20", remark:""},
+        {id:"ZS-003", name:"建筑业企业资质证书", category:"公司资质", holder:"恒达电力工程有限公司", certNo:"D142xxxxxxxx", issuer:"武汉市城建局", issueDate:"2021-06-26", expiry:"2026-06-25", remark:"临近到期，需提前换证"},
+        {id:"ZS-004", name:"营业执照", category:"公司资质", holder:"恒达电力工程有限公司", certNo:"91420100MA4xxxxxx", issuer:"武汉市市场监管局", issueDate:"2020-04-01", expiry:"2050-03-31", remark:"长期"},
+        // 体系认证
+        {id:"ZS-005", name:"ISO9001 质量管理体系认证", category:"体系认证", holder:"恒达电力工程有限公司", certNo:"00123Q3xxxxR0M", issuer:"中certification认证中心", issueDate:"2023-08-31", expiry:"2026-08-30", remark:""},
+        {id:"ZS-006", name:"ISO45001 职业健康安全体系认证", category:"体系认证", holder:"恒达电力工程有限公司", certNo:"00123S3xxxxR0M", issuer:"中certification认证中心", issueDate:"2024-02-10", expiry:"2027-02-09", remark:""},
+        // 个人执业
+        {id:"ZS-007", name:"一级建造师（机电工程）", category:"个人执业", holder:"张建国", certNo:"鄂142xxxxxxxx", issuer:"住建部", issueDate:"2021-09-06", expiry:"2026-09-05", remark:"项目经理岗位必备"},
+        {id:"ZS-008", name:"二级建造师（机电工程）", category:"个人执业", holder:"李志强", certNo:"鄂242xxxxxxxx", issuer:"湖北省住建厅", issueDate:"2023-05-21", expiry:"2026-05-20", remark:"已过期，需尽快继续教育换证"},
+        {id:"ZS-009", name:"注册安全工程师", category:"个人执业", holder:"陈明", certNo:"安42xxxxxxxx", issuer:"应急管理部", issueDate:"2024-01-16", expiry:"2027-01-15", remark:""},
+        {id:"ZS-010", name:"注册造价工程师", category:"个人执业", holder:"孙倩", certNo:"造42xxxxxxxx", issuer:"住建部", issueDate:"2022-12-02", expiry:"2026-12-01", remark:""},
+        {id:"ZS-011", name:"会计专业技术资格（中级）", category:"个人执业", holder:"周敏", certNo:"会42xxxxxxxx", issuer:"财政部", issueDate:"2023-07-29", expiry:"2026-07-28", remark:""},
+        // 特种作业
+        {id:"ZS-012", name:"高压电工进网作业许可证", category:"特种作业", holder:"王海涛", certNo:"T42xxxxxxxxxxxx", issuer:"应急管理局", issueDate:"2023-07-01", expiry:"2026-06-30", remark:"临近到期，需复审"},
+        {id:"ZS-013", name:"特种作业操作证（高处作业）", category:"特种作业", holder:"刘洋", certNo:"T42xxxxxxxxxxxx", issuer:"应急管理局", issueDate:"2023-04-13", expiry:"2026-04-12", remark:"已过期，禁止上岗作业"},
+        {id:"ZS-014", name:"焊工特种作业操作证", category:"特种作业", holder:"赵立军", certNo:"T42xxxxxxxxxxxx", issuer:"应急管理局", issueDate:"2024-05-15", expiry:"2027-05-14", remark:""},
+    ];
+
     return { projects, contracts, subcontracts, boq, progress, cost, fin_income, fin_cash,
-             bank_accounts, bank_transfers,
+             bank_accounts, bank_transfers, certs,
              okr_periods, okr_objectives, okr_templates, okr_rules };
 }
 
@@ -231,6 +253,11 @@ function ensureAuth(data){
     }
     return data;
 }
+// 非破坏性注入证书台账（老库缺失时补默认数据，不动其它数据）
+function ensureCerts(data){
+    if(!Array.isArray(data.certs) || !data.certs.length){ data.certs = seed().certs; }
+    return data;
+}
 
 let db = load();
 const subs = [];
@@ -239,6 +266,7 @@ function load(){
     try{ const raw=localStorage.getItem(KEY); if(raw) data=JSON.parse(raw); }catch(e){}
     if(!data) data=seed();
     ensureAuth(data);
+    ensureCerts(data);
     localStorage.setItem(KEY, JSON.stringify(data));
     return data;
 }
@@ -250,7 +278,7 @@ export const Store = {
     add(coll,rec){ if(!db[coll]) db[coll]=[]; if(!rec.id) rec.id=uid(coll.slice(0,2).toUpperCase()); db[coll].unshift(rec); persist(); return rec; },
     update(coll,id,patch){ const r=(db[coll]||[]).find(x=>x.id===id); if(r)Object.assign(r,patch); persist(); return r; },
     remove(coll,id){ if(db[coll]) db[coll]=db[coll].filter(r=>r.id!==id); persist(); },
-    reset(){ db=ensureAuth(seed()); persist(); },
+    reset(){ db=ensureCerts(ensureAuth(seed())); persist(); },
     subscribe(fn){ subs.push(fn); },
     newId:uid,
 };

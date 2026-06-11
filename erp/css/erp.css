@@ -332,6 +332,20 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
 .perm-leaf{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);cursor:pointer;padding:2px 0}
 .perm-leaf input,.perm-mod-head input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 
+/* ---------- 证书报警铃铛 + 预警清单 ---------- */
+.tb-icon .dot.badge-num{position:absolute;top:1px;right:1px;min-width:16px;width:auto;height:16px;padding:0 4px;
+    border-radius:9px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid #fff;line-height:1}
+.tb-icon.bell-alarm{animation:bellShake 2.4s ease-in-out infinite}
+@keyframes bellShake{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-12deg)}93%{transform:rotate(10deg)}96%{transform:rotate(-6deg)}}
+.notif-list{display:flex;flex-direction:column}
+.notif-item{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--line-2)}
+.notif-item:last-child{border:none}
+.notif-item .ni-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:17px;background:var(--soft);flex-shrink:0}
+.notif-item .ni-main{flex:1;min-width:0}
+.notif-item .ni-t{font-size:14px;font-weight:600;color:var(--navy)}
+.notif-item .ni-d{font-size:12px;color:var(--gray-l);margin-top:2px}
+.notif-item .ni-r{text-align:right;white-space:nowrap}
+
 /* ---------- 全局功能搜索面板 ---------- */
 .search-panel{position:fixed;top:56px;left:50%;transform:translateX(-50%);width:520px;max-width:90vw;max-height:420px;overflow:auto;
     background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow-lg);z-index:120;display:none;padding:8px}
