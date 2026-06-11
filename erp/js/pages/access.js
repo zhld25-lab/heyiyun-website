@@ -10,7 +10,7 @@ import { isSuper } from "../auth.js";
 
 export default function access(leaf){
     const initTab = leaf.name.includes("角色") ? "roles" : "users";
-    const state = { roleId:null };
+    const state = { roleId:null, showPwd:false };
     const roleName = id => { const r=Store.get("sys_roles",id); return r?r.name:id; };
 
     const html = `
@@ -26,11 +26,14 @@ export default function access(leaf){
         const users=Store.all("sys_users");
         $("#accBody").innerHTML=`
         <div class="card"><div class="card-head"><h3>系统账号</h3>
-            <button class="btn btn-primary btn-sm" id="addUser"><span class="ic">＋</span>新建用户</button></div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-light btn-sm" id="togglePwd">${state.showPwd?"🙈 隐藏密码":"👁 显示密码"}</button>
+                <button class="btn btn-primary btn-sm" id="addUser"><span class="ic">＋</span>新建用户</button></div></div>
             <div class="card-body" style="padding-top:6px"><div id="uTbl"></div></div></div>`;
         const cols=[
             {title:"登录账号",render:u=>`<span class="strong">${esc(u.username)}</span>`},
             {title:"姓名",render:u=>esc(u.name)},
+            {title:"密码",render:u=>`<span class="pwd-cell" data-id="${u.id}" title="点击切换显示/隐藏" style="font-family:monospace;cursor:pointer">${state.showPwd?esc(u.password||""):"••••••"}</span>`},
             {title:"角色",align:"center",render:u=>badge(roleName(u.roleId))},
             {title:"状态",align:"center",render:u=>badge(u.status||"启用")},
             {title:"操作",align:"center",render:u=>`<div class="row-act">
@@ -40,6 +43,10 @@ export default function access(leaf){
                 <button data-act="del" data-id="${u.id}">删除</button></div>`},
         ];
         $("#uTbl").innerHTML=table(cols, users);
+        $("#togglePwd").onclick=()=>{ state.showPwd=!state.showPwd; renderUsers(); };
+        // 单格点击：临时显示/隐藏该账号密码（不影响全局开关）
+        $$('#uTbl .pwd-cell').forEach(c=>c.onclick=()=>{ const u=Store.get("sys_users",c.dataset.id);
+            c.textContent = (c.textContent==="••••••") ? (u.password||"") : "••••••"; });
         $("#addUser").onclick=()=>userForm();
         $$('#uTbl [data-act="edit"]').forEach(b=>b.onclick=()=>userForm(b.dataset.id));
         $$('#uTbl [data-act="pwd"]').forEach(b=>b.onclick=()=>resetPwd(b.dataset.id));
