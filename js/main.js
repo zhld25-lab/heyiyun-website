@@ -1,4 +1,4 @@
-// ===== 和易云电力工程ERP 官网交互 =====
+// ===== 恒达云电力工程ERP 官网交互 =====
 
 // 1. 滚动时导航栏变实色
 const header = document.getElementById('siteHeader');

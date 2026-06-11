@@ -32,7 +32,7 @@ function firstAllowed(){
 
 /* ---------- 模块图标轨 ---------- */
 function buildRail(){
-    let html = `<div class="rail-logo">和</div>`;
+    let html = `<div class="rail-logo">恒</div>`;
     html += MENU.filter(moduleVisible).map(m=>`<div class="rail-item" data-mod="${m.key}" title="${esc(m.name)}"><div>${m.icon}</div><span>${esc(m.name)}</span></div>`).join("");
     $("#modRail").innerHTML = html;
     $$("#modRail .rail-item").forEach(it=>it.onclick=()=>{
@@ -102,7 +102,7 @@ function navigate(){
 
     $("#crumbTitle").textContent = leaf.name;
     $("#crumbSub").textContent = `${leaf.module} · ${leaf.group||leaf.module}`;
-    document.title = `${leaf.name} · 和易云电力工程ERP`;
+    document.title = `${leaf.name} · 恒达云电力工程ERP`;
 
     const root = $("#page"); root.innerHTML="";
     try{
