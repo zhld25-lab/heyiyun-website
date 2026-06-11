@@ -1,0 +1,22 @@
+{
+  "name": "恒达云电力工程ERP",
+  "short_name": "恒达云",
+  "description": "恒达云电力工程ERP —— 项目数字化经营管理平台：项目、合同、清单双价、采购、进度、成本资金与财务一体化。",
+  "lang": "zh-CN",
+  "start_url": "./erp/login.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1733",
+  "theme_color": "#1b5fe3",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "进入ERP登录", "url": "./erp/login.html" },
+    { "name": "官网首页", "url": "./index.html" }
+  ]
+}
