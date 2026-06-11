@@ -52,6 +52,31 @@ function buildRail(){
     });
 }
 
+/* ---------- 移动端底部Tab导航 ---------- */
+const TAB_PREF = ["decision","project","finance","okr","me"];   // 优先展示的模块
+function buildTabbar(){
+    const bar = $("#tabbar"); if(!bar) return;
+    const visible = MENU.filter(moduleVisible);
+    const picks = TAB_PREF.map(k=>visible.find(m=>m.key===k)).filter(Boolean).slice(0,4);
+    // 不足 4 个时按可见顺序补齐
+    for(const m of visible){ if(picks.length>=4) break; if(!picks.includes(m)) picks.push(m); }
+    bar.innerHTML = picks.map(m=>`<a class="tab-item" data-mod="${m.key}"><div>${m.icon}</div><span>${esc(m.name)}</span></a>`).join("")
+        + `<a class="tab-item" data-more><div>☰</div><span>全部</span></a>`;
+    $$("#tabbar .tab-item[data-mod]").forEach(t=>t.onclick=()=>{
+        const m = MENU.find(x=>x.key===t.dataset.mod);
+        const firstLeaf = m.groups.flatMap(g=>g.leaves).find(l=>canLeaf(l.key));
+        if(firstLeaf) location.hash = firstLeaf.key;
+    });
+    const more = bar.querySelector("[data-more]");
+    if(more) more.onclick=()=>{
+        buildSidebar(activeModuleKey || MENU[0].key, location.hash.slice(1));
+        document.querySelector(".app").classList.add("navopen");
+    };
+}
+function highlightTab(moduleKey){
+    $$("#tabbar .tab-item[data-mod]").forEach(t=>t.classList.toggle("on", t.dataset.mod===moduleKey));
+}
+
 /* ---------- 侧栏分组手风琴 ---------- */
 function buildSidebar(moduleKey, activeLeafKey){
     const m = MENU.find(x=>x.key===moduleKey);
@@ -120,6 +145,7 @@ function navigate(){
     }
     root.scrollTop=0;
     document.querySelector(".app").classList.remove("navopen");
+    highlightTab(activeModuleKey);
     certBell();
 }
 
@@ -170,8 +196,11 @@ $("#tbToggle").addEventListener("click",()=>document.querySelector(".app").class
 $("#resetBtn").addEventListener("click",()=>{ if(confirm("确定重置所有演示数据吗？将恢复初始示例数据。")){ Store.reset(); navigate(); } });
 const logoutBtn=$("#logoutBtn"); if(logoutBtn) logoutBtn.addEventListener("click",()=>{ if(confirm("确定退出登录吗？")){ logout(); location.href="login.html"; } });
 
+const navMask=$("#navMask"); if(navMask) navMask.addEventListener("click",()=>document.querySelector(".app").classList.remove("navopen"));
+
 /* ---------- 启动 ---------- */
 buildRail();
+buildTabbar();
 setupSearch();
 navigate();
 certBell();

@@ -398,18 +398,124 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff}
     .kr-edit{grid-template-columns:1fr 1fr;}
     .kr-edit.head{display:none}
 }
+/* ---------- 移动端基建：遮罩 + 底部Tab（桌面隐藏） ---------- */
+.nav-mask{display:none}
+.tabbar{display:none}
+
 @media(max-width:768px){
-    :root{--rail-h:52px}
-    .modrail{height:var(--rail-h)}
-    .sidebar{top:var(--rail-h);left:0;transform:translateX(-100%);width:230px;box-shadow:6px 0 30px rgba(6,17,42,.4)}
+    /* ===== 布局骨架 ===== */
+    :root{--rail-h:52px; --tabbar-h:58px}
+    body{-webkit-tap-highlight-color:transparent}
+    .modrail{height:var(--rail-h);padding-top:env(safe-area-inset-top);
+        height:calc(var(--rail-h) + env(safe-area-inset-top))}
+    .rail-logo{width:34px;height:34px;font-size:17px}
+    .rail-item{min-width:54px;height:44px}
+    .sidebar{top:calc(var(--rail-h) + env(safe-area-inset-top));left:0;transform:translateX(-100%);
+        width:min(78vw,300px);box-shadow:6px 0 30px rgba(6,17,42,.4);z-index:55;
+        bottom:0;transition:transform .25s ease}
     .app.navopen .sidebar{transform:none}
-    .main{margin-left:0;margin-top:var(--rail-h)}
-    .tb-toggle{display:block}
+    .main{margin-left:0;margin-top:calc(var(--rail-h) + env(safe-area-inset-top))}
+    .topbar{top:calc(var(--rail-h) + env(safe-area-inset-top));height:54px;padding:0 14px;gap:10px}
+    .tb-toggle{display:block;width:40px;height:40px;border-radius:10px;display:grid;place-items:center}
+    .tb-toggle:active{background:var(--soft)}
     .tb-search{display:none}
-    .form-grid,.detail-grid{grid-template-columns:1fr}
-    .kpi-grid{grid-template-columns:1fr}
+    .tb-icon{width:40px;height:40px}
+    .tb-user{padding-left:8px}
     .tb-user .nm,.tb-user .rl{display:none}
-    .search-panel{width:94vw}
+    .crumb span{display:none}
+    .page{padding:14px 12px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 18px)}
+    .page-head{margin-bottom:14px}
+    .page-head h1{font-size:19px}
+    .page-head .actions{width:100%;justify-content:flex-end}
+    .search-panel{width:94vw;top:calc(var(--rail-h) + env(safe-area-inset-top) + 56px)}
+
+    /* ===== 抽屉遮罩 ===== */
+    .nav-mask{display:block;position:fixed;inset:0;background:rgba(6,17,42,.45);z-index:52;
+        opacity:0;pointer-events:none;transition:.22s;backdrop-filter:blur(2px)}
+    .app.navopen .nav-mask{opacity:1;pointer-events:auto}
+
+    /* ===== 底部Tab导航（App式） ===== */
+    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:48;
+        height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+        padding-bottom:env(safe-area-inset-bottom);
+        background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+        border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(16,40,90,.08)}
+    .tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+        color:var(--gray-l);font-size:20px;transition:.15s;position:relative}
+    .tab-item span{font-size:10.5px;font-weight:600}
+    .tab-item.on{color:var(--blue)}
+    .tab-item.on::before{content:"";position:absolute;top:0;width:34px;height:3px;border-radius:0 0 4px 4px;
+        background:linear-gradient(90deg,var(--blue),var(--cyan))}
+    .tab-item:active{transform:scale(.94)}
+
+    /* ===== 输入 16px 防 iOS 聚焦缩放 + 触控目标加大 ===== */
+    .input,.select,textarea,.search-box input,.tb-search input,.score-in{font-size:16px!important}
+    .btn{padding:11px 18px;min-height:42px}
+    .btn-sm{padding:8px 13px;min-height:36px}
+    .row-act button{padding:9px 12px;font-size:14px;min-height:38px}
+    .sb-leaf{padding:12px 12px 12px 26px;font-size:15px}
+    .acc-head{padding:12px}
+    .toast-wrap{top:auto;bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);right:12px;left:12px}
+    .toast{min-width:0}
+
+    /* ===== 工具栏：横向滑动一行 ===== */
+    .toolbar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;gap:8px}
+    .toolbar::-webkit-scrollbar{height:0}
+    .toolbar .search-box{flex-shrink:0}
+    .toolbar .search-box input{width:150px}
+    .toolbar .select,.toolbar .input{flex-shrink:0;max-width:138px}
+    .toolbar #summary{display:none}
+
+    /* ===== 表格 → 卡片式（核心） ===== */
+    .table-wrap{overflow:visible;border-radius:0}
+    .tbl{display:block}
+    .tbl thead{display:none}
+    .tbl tbody{display:flex;flex-direction:column;gap:11px}
+    .tbl tbody tr{display:block;background:#fff;border:1px solid var(--line);border-radius:13px;
+        padding:13px 15px;box-shadow:var(--shadow)}
+    .tbl tbody tr:hover{background:#fff}
+    .tbl tbody td{display:flex;align-items:center;justify-content:space-between;gap:12px;
+        padding:7px 0;border-bottom:1px dashed var(--line-2);white-space:normal;text-align:right}
+    .tbl tbody td:last-child{border-bottom:none}
+    .tbl tbody td::before{content:attr(data-th);font-size:12px;color:var(--gray-l);font-weight:600;
+        flex-shrink:0;text-align:left}
+    .tbl tbody td.td-act{justify-content:flex-end;padding-top:10px}
+    .tbl tbody td.td-act::before{content:""}
+    .tbl tbody td.td-empty{display:block;text-align:center;border:none}
+    .tbl tbody td.td-empty::before{content:""}
+    .tbl .bar{min-width:90px}
+    .bar-wrap{justify-content:flex-end}
+    /* 弹窗与统计页内的小表格同样卡片化（含排名/汇总） */
+
+    /* ===== 弹窗 → 底部抽屉 ===== */
+    .modal-mask{padding:0;align-items:flex-end}
+    .modal{max-width:100%;width:100%;max-height:92vh;border-radius:18px 18px 0 0;
+        transform:translateY(100%)}
+    .modal-mask.show .modal{transform:none}
+    .modal-head{padding:15px 18px}
+    .modal-body{padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+    .modal-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+    .modal-foot .btn{flex:1}
+
+    /* ===== 网格/卡片自适应 ===== */
+    .form-grid,.detail-grid{grid-template-columns:1fr}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);gap:11px}
+    .kpi{padding:14px}
+    .kpi-val{font-size:21px}
+    .kpi-ic{width:38px;height:38px;font-size:18px}
+    .card-body{padding:14px}
+    .card-head{padding:13px 14px}
+    .kanban{gap:11px}
+    .kb-col{flex:0 0 82vw}
+    .p360-kpis{grid-template-columns:repeat(2,1fr)}
+    .p360-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+    .p360-tabs button{flex-shrink:0}
+    .okr-obj{padding:14px}
+    .okr-score-box{grid-template-columns:repeat(2,1fr)}
+    .acc-cards{grid-template-columns:1fr}
+    .perm-tree{grid-template-columns:1fr}
+    .view-tabs{width:100%;justify-content:center}
+    .pager{flex-direction:column;gap:10px}
 }
 
 /* ============================================================

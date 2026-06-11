@@ -83,10 +83,11 @@ export function table(columns, rows){
         const tds = columns.map(c=>{
             const cls = c.align==='right'?'right':c.align==='center'?'center':'';
             const val = c.render ? c.render(r) : esc(r[c.key]);
-            return `<td class="${cls} ${c.cls||''}">${val}</td>`;
+            const isAct = c.title==='操作';
+            return `<td class="${cls} ${c.cls||''} ${isAct?'td-act':''}" data-th="${esc(c.title)}">${val}</td>`;
         }).join("");
         return `<tr data-id="${esc(r.id)}">${tds}</tr>`;
-    }).join("") : `<tr><td colspan="${columns.length}"><div class="empty"><div class="ic">📭</div>暂无数据</div></td></tr>`;
+    }).join("") : `<tr><td colspan="${columns.length}" class="td-empty"><div class="empty"><div class="ic">📭</div>暂无数据</div></td></tr>`;
     return `<div class="table-wrap"><table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 

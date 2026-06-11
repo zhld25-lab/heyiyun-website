@@ -1,5 +1,5 @@
 /* 恒达云 ERP Service Worker —— 网络优先（保证拿到最新），离线回退缓存 */
-const CACHE = "hengdayun-erp-v1";
+const CACHE = "hengdayun-erp-v2";
 const SHELL = [
   "./",
   "./index.html",
