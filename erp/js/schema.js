@@ -222,6 +222,18 @@ function bespoke(){
             F("summary","摘要",{full:true,col:true}), F("remark","备注",{type:"textarea",full:true}) ],
         okr_periods:[ F("name","周期名称",{required:true,col:true,full:true}), F("start","开始日期",{type:"date",col:true,date:true}),
             F("end","结束日期",{type:"date",col:true}), fStatus(["未开始","进行中","已结束"],"周期状态","进行中"), F("remark","说明",{type:"textarea",full:true}) ],
+        customers:[ F("name","客户名称",{required:true,full:true,col:true}), F("type","行业/等级",{col:true,filter:true}),
+            F("contact","联系人",{col:true}), F("phone","联系电话",{col:true}), F("address","地址",{full:true}),
+            fStatus(["合作中","停用"],"状态","合作中"), F("remark","区域/来源",{col:true}) ],
+        suppliers:[ F("name","供应商名称",{required:true,full:true,col:true}), F("contact","联系人",{col:true}),
+            F("phone","联系电话",{col:true}), F("type","类别",{col:true}), F("address","地址",{full:true}),
+            fStatus(["合作中","停用"],"状态","合作中"), F("remark","区域",{col:true}) ],
+        subcontractors:[ F("name","分包商名称",{required:true,full:true,col:true}), F("contact","联系人",{col:true}),
+            F("phone","联系电话",{col:true}), F("type","类别",{col:true}), F("address","地址",{full:true}),
+            fStatus(["合作中","停用"],"状态","合作中"), F("remark","区域",{col:true}) ],
+        materials:[ F("code","材料编码",{col:true}), F("name","材料名称",{required:true,full:true,col:true}),
+            F("category","规格型号",{col:true,filter:true}), F("unit","单位",{col:true}),
+            F("partyAPrice","参考单价(元)",{type:"number",align:"right",col:true}), F("remark","备注",{type:"textarea",full:true}) ],
         fin_salary:[ F("party","收款人（员工姓名）",{required:true,col:true,filter:true}),
             F("period","薪资月份",{col:true,placeholder:"如 2026-06"}), fProject(),
             fAmount("薪资金额(万元)"), F("method","付款方式",{type:"select",options:["银行转账","现金","其他"]}),
@@ -240,8 +252,6 @@ export function schemaFor(leaf){
     if(leaf.kind==="todo") return {kind:"todo"};
     if(leaf.kind==="access") return {kind:"access"};
     if(leaf.kind==="certalarm") return {kind:"certalarm"};
-    if(leaf.kind==="feedback") return {kind:"feedback"};
-    if(leaf.kind==="analysis") return {kind:"analysis"};
     if(leaf.kind==="transfer") return {kind:"transfer"};
     if(leaf.kind==="flow") return {kind:"flow"};
     if(leaf.kind==="attendance") return {kind:"attendance"};

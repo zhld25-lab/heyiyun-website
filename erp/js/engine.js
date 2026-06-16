@@ -6,7 +6,7 @@ import { $, $$, table, badge, riskBadge, bar, modal, confirmBox, toast, options,
 import { barChart, donutChart, legendHTML, PALETTE } from "./charts.js";
 import { openProject360 } from "./project360.js";
 import { currentUser, canApprove, isSuper } from "./auth.js";
-import { startFlow, currentStep, canActOn, approveStep, rejectStep, resubmitFlow, timelineHTML, stageLabel, currentApproverName } from "./flow.js";
+import { startFlow, currentStep, canActOn, approveStep, rejectStep, resubmitFlow, timelineHTML, stageLabel } from "./flow.js";
 
 const projName = id => { const p=Store.get("projects",id); return p?p.name:(id||"—"); };
 
@@ -25,64 +25,6 @@ function show(field, rec){
     if(field.filter) return `<a class="cell-lnk" data-fk="${field.key}" data-fv="${esc(v)}" title="按此筛选">${esc(v)}</a>`;
     if(field.key==="name"||field.key==="title"||field.key==="code") return `<a class="cell-lnk" data-detail="${esc(rec.id)}" title="查看详情">${esc(v)}</a>`;
     return `<a class="cell-lnk" data-q="${esc(v)}" title="搜索相关记录">${esc(v)}</a>`;
-}
-
-/* ---------- 批量导入：通用解析与映射 ---------- */
-let _xlsxLoading;
-function loadXLSX(){
-    if(window.XLSX) return Promise.resolve(window.XLSX);
-    if(_xlsxLoading) return _xlsxLoading;
-    _xlsxLoading = new Promise((res,rej)=>{ const s=document.createElement("script");
-        s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
-        s.onload=()=>res(window.XLSX);
-        s.onerror=()=>rej(new Error("无法加载 Excel 解析库（请联网，或将文件另存为 .csv 再导入）"));
-        document.head.appendChild(s); });
-    return _xlsxLoading;
-}
-function parseCSV(text){
-    text=String(text).replace(/^﻿/,"").replace(/\r\n/g,"\n").replace(/\r/g,"\n");
-    const rows=[]; let row=[], field="", inQ=false, i=0;
-    while(i<text.length){ const ch=text[i];
-        if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){ field+='"'; i+=2; continue; } inQ=false; i++; continue; } field+=ch; i++; continue; }
-        if(ch==='"'){ inQ=true; i++; continue; }
-        if(ch===','){ row.push(field); field=""; i++; continue; }
-        if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=""; i++; continue; }
-        field+=ch; i++;
-    }
-    if(field.length||row.length){ row.push(field); rows.push(row); }
-    return rows;
-}
-function readRows(file){
-    const name=(file.name||"").toLowerCase();
-    if(name.endsWith(".csv")) return file.text().then(parseCSV);
-    return loadXLSX().then(XLSX=>file.arrayBuffer()).then(buf=>{
-        const XLSX=window.XLSX; const wb=XLSX.read(buf,{type:"array"});
-        const ws=wb.Sheets[wb.SheetNames[0]];
-        return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""});
-    });
-}
-function coerceField(f, raw){
-    let v=String(raw==null?"":raw).trim();
-    if(f.type==="select" && Array.isArray(f.options)){
-        const o=f.options.find(o=>{ const val=typeof o==="object"?o.value:o, lab=typeof o==="object"?o.label:o; return lab===v||String(val)===v; });
-        if(o) return typeof o==="object"?o.value:o;
-    }
-    if(f.type==="number") return +v||0;
-    return v;
-}
-function mapRows(rows, flds){
-    const out={valid:[],skipped:0};
-    if(!rows||rows.length<2) return out;
-    const header=rows[0].map(h=>String(h).trim());
-    const idxOf=f=>{ let i=header.indexOf(f.label); if(i<0) i=header.indexOf(f.key); return i; };
-    const cols=flds.map(f=>({f, idx:idxOf(f)}));
-    for(let r=1;r<rows.length;r++){ const row=rows[r];
-        if(!row || row.every(c=>String(c).trim()==="")) continue;
-        const rec={}; let ok=true;
-        for(const {f,idx} of cols){ const val=coerceField(f, idx>=0?row[idx]:""); if(f.required && (val===""||val==null)) ok=false; rec[f.key]=val; }
-        if(ok) out.valid.push(rec); else out.skipped++;
-    }
-    return out;
 }
 
 /* ---------- 列表页 ---------- */
@@ -240,74 +182,6 @@ function listPage(leaf, schema){
         });
     }
 
-    // 可导入字段（排除锁定字段，如审批状态）
-    const importFields = fields.filter(f=>!f.noEdit);
-    function csvCell(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
-    function downloadTemplate(){
-        const headers=importFields.map(f=>f.label);
-        const sample=importFields.map(f=>{
-            if(f.key==="project"){ const p=Store.all("projects")[0]; return p?p.name:""; }
-            if(f.type==="date") return "2026-06-01";
-            if(f.type==="number") return "0";
-            if(Array.isArray(f.options)&&f.options.length){ const o=f.options[0]; return typeof o==="object"?o.label:o; }
-            return "";
-        });
-        const csv=[headers,sample].map(r=>r.map(csvCell).join(",")).join("\r\n");
-        const a=document.createElement("a");
-        a.href=URL.createObjectURL(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"}));
-        a.download=`${leaf.name}_导入模板.csv`; document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(()=>URL.revokeObjectURL(a.href),1500);
-    }
-    function addImported(data){
-        importFields.forEach(f=>{ if((data[f.key]===""||data[f.key]==null) && f.default!=null) data[f.key]=f.default; });
-        fields.forEach(f=>{ if(f.noEdit && data[f.key]==null) data[f.key]=f.default; });
-        const u=currentUser(); if(u) data.submitter=u.name;
-        const rec=Store.add(leaf.coll,data);
-        if(fields.some(f=>f.key==="approval")){ const flow=startFlow(leaf.coll,rec,u);
-            if(flow) Store.update(leaf.coll,rec.id,{flow,approval:flow.status==="approved"?"已批准":"待审批"}); }
-    }
-    function previewHTML(p){
-        const cols=importFields.filter(f=>f.col).slice(0,5);
-        const dv=(f,v)=>f.key==="project"?projName(v):esc(v==null?"":v);
-        const head=cols.map(c=>`<th>${esc(c.label)}</th>`).join("");
-        const rowsH=p.valid.slice(0,5).map(r=>`<tr>${cols.map(c=>`<td>${dv(c,r[c.key])}</td>`).join("")}</tr>`).join("");
-        return `<div class="okr-tip" style="margin-bottom:10px">解析完成：可导入 <b style="color:#16a34a">${p.valid.length}</b> 条${p.skipped?`，<b style="color:#dc2626">${p.skipped}</b> 条因缺少必填项将跳过`:""}。${p.valid.length?"预览前 5 条：":""}</div>
-            ${p.valid.length?`<div class="table-wrap"><table class="tbl"><thead><tr>${head}</tr></thead><tbody>${rowsH}</tbody></table></div>`:""}`;
-    }
-    function importModal(){
-        const reqLabels=importFields.filter(f=>f.required).map(f=>f.label).join("、")||"无";
-        const body=`
-            <p class="okr-tip" style="margin-bottom:12px">① 点「下载模板」→ ② 在 Excel 按列填写（可多行）→ ③ 选择文件导入。支持 <b>.xlsx / .xls / .csv</b>；必填列：<b>${esc(reqLabels)}</b>。「所属项目」请填项目名称。</p>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
-                <button class="btn btn-light" id="dlTpl"><span class="ic">⬇</span>下载导入模板</button>
-                <label class="btn btn-primary" style="position:relative;overflow:hidden;cursor:pointer">📄 选择文件
-                    <input type="file" id="impFile" accept=".csv,.xlsx,.xls" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label>
-                <span id="impName" style="font-size:13px;color:#5b6478"></span>
-            </div>
-            <div id="impResult"></div>`;
-        modal({ title:`批量导入 · ${leaf.name}`, large:true, body,
-            footer:`<button class="btn btn-light" data-close>关闭</button><button class="btn btn-primary" data-do disabled>确认导入</button>`,
-            onMount:(el,close)=>{
-                let parsed=null; const doBtn=el.querySelector("[data-do]");
-                el.querySelector("#dlTpl").onclick=downloadTemplate;
-                el.querySelector("#impFile").onchange=e=>{
-                    const file=e.target.files&&e.target.files[0]; if(!file) return;
-                    el.querySelector("#impName").textContent=file.name;
-                    el.querySelector("#impResult").innerHTML='<div class="okr-tip">⏳ 解析中…</div>';
-                    readRows(file).then(rows=>{ parsed=mapRows(rows, importFields);
-                        el.querySelector("#impResult").innerHTML=previewHTML(parsed);
-                        doBtn.disabled=parsed.valid.length===0;
-                    }).catch(err=>{ parsed=null; doBtn.disabled=true;
-                        el.querySelector("#impResult").innerHTML=`<div class="empty"><div class="ic">⚠️</div>解析失败：${esc(err.message)}</div>`; });
-                };
-                doBtn.onclick=()=>{ if(!parsed||!parsed.valid.length) return;
-                    parsed.valid.forEach(addImported);
-                    toast(`成功导入 ${parsed.valid.length} 条${parsed.skipped?`，跳过 ${parsed.skipped} 条`:""}`,"ok");
-                    close(); render(); };
-            }
-        });
-    }
-
     function mount(){
         // 来自看板/其他页的预设筛选
         try{ const ps=JSON.parse(sessionStorage.getItem("erp_preset")||"null");
@@ -315,7 +189,7 @@ function listPage(leaf, schema){
             sessionStorage.removeItem("erp_preset");
         }catch(e){}
         $("#addBtn").onclick=()=>form();
-        $("#impBtn").onclick=()=>importModal();
+        $("#impBtn").onclick=()=>toast("演示：导入功能将解析 Excel 批量入库","ok");
         $("#q").oninput=e=>{state.q=e.target.value;render();};
         $$("[data-f]").forEach(s=>{ if(state.filters[s.dataset.f]) s.value=state.filters[s.dataset.f];
             s.onchange=e=>{state.filters[s.dataset.f]=e.target.value;render();}; });
@@ -395,7 +269,7 @@ const DONE_AP = ["已批准","已驳回"];
 function normDoc(c, label, r){
     return { coll:c, label, id:r.id, name:r.name||(c==="fin_salary"?`${r.party||""} ${r.period||""}薪资`.trim():null)||r.code||r.id, project:r.project,
         party:r.partyA||r.party||"", amount:r.amount, date:r.date||r.signedDate||"",
-        approval:r.approval||"待审批", status:r.status||"", submitter:(r.flow&&r.flow.submitter)||r.submitter||r.manager||r.reporter||r.applicant||"系统" };
+        approval:r.approval||"待审批", status:r.status||"", submitter:r.submitter||r.manager||r.reporter||r.applicant||"系统" };
 }
 function todoPage(leaf){
     const mode = /已办/.test(leaf.name) ? "done" : /知会/.test(leaf.name) ? "notify" : "todo";
@@ -433,23 +307,15 @@ function todoPage(leaf){
             {label:"金额(万元)", value:d.amount!=null&&d.amount!==""?fmt.money(d.amount):"—"},
             {label:"当前状态", value:badge(d.approval||d.status)},
         ];
-        const rec = d.rec || Store.get(d.coll, d.id);
-        // 当前在谁那里审批（提交给谁）
-        let handleVal;
-        if(rec&&rec.flow){
-            if(rec.flow.status==="approved") handleVal = '<b style="color:#16a34a">已全部审批通过</b>';
-            else if(rec.flow.status==="rejected") handleVal = '<b style="color:#dc2626">已驳回，退回提交人</b>';
-            else { const who=currentApproverName(rec); handleVal = `${esc(stageLabel(rec))}${who?` · <b style="color:#1b5fe3">${esc(who)}</b>`:""}`; }
-        } else handleVal = badge(d.approval);
         // 明细字段：纵向排列
         const rows = [
             {label:"单据名称", value:esc(d.name)},
             {label:"所属项目", value:esc(projName(d.project))},
             {label:"相对方 / 对象", value:esc(d.party||"—")},
             {label:"提交人", value:esc(d.submitter)},
-            {label:"当前处理 / 提交至", value:handleVal},
             {label:"单据日期", value:esc(d.date||"—")},
         ];
+        const rec = d.rec || Store.get(d.coll, d.id);
         const actionable = mode==="todo" && (rec&&rec.flow ? canActOn(rec) : canApprove());
         const body = `<div class="todo-form">
             <div class="todo-top">${top.map(t=>`<div class="cell"><span>${t.label}</span><b>${t.value}</b></div>`).join("")}</div>

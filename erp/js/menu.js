@@ -21,7 +21,6 @@ export const MENU = [
         {n:"承包合同", coll:"contracts", kind:"stat"}, {n:"分包合同", coll:"subcontracts", kind:"stat"},
         {n:"采购合同", coll:"mat_pur_contract", kind:"stat"}, {n:"设备租赁", coll:"eq_lease_contract", kind:"stat"},
         {n:"周材租赁", coll:"zc_lease_contract", kind:"stat"},
-        {n:"经营分析", kind:"analysis"},
     ]},
 ]},
 
@@ -71,7 +70,7 @@ export const MENU = [
     { name:"分包合同", leaves:[
         "分包计划", {n:"分包合同", coll:"subcontracts"}, "分包进度款申报", "分包完工结算",
         "分包付款", "分包收票", "分包合同变更", "分包合同索赔", "分包合同扣款", "分包合同罚款",
-        "分包商", {n:"分包合同统计", coll:"subcontracts", kind:"stat"}, {n:"分包合同管理", coll:"subcontracts", kind:"stat"},
+        {n:"分包商", coll:"subcontractors"}, {n:"分包合同统计", coll:"subcontracts", kind:"stat"}, {n:"分包合同管理", coll:"subcontracts", kind:"stat"},
     ]},
     { name:"劳务管理", leaves:[
         "劳务计划", "劳务队", "劳务人员", "劳务工种", {n:"劳务考勤", kind:"attendance"},
@@ -85,7 +84,7 @@ export const MENU = [
     ]},
     { name:"材料采购", leaves:[
         {n:"采购合同", coll:"mat_pur_contract"}, "采购结算", "材料采购付款", "材料采购收票",
-        "供应商", "供应商报价", {n:"采购报价对比", kind:"stat", src:"mat_quote"}, "采购入库",
+        {n:"供应商", coll:"suppliers"}, "供应商报价", {n:"采购报价对比", kind:"stat", src:"mat_quote"}, "采购入库",
         "采购退货出库", "采购现场收货", "采购现场退货", {n:"采购到货统计", kind:"stat", src:"mat_inbound"},
     ]},
     { name:"甲供材料", leaves:[
@@ -99,7 +98,7 @@ export const MENU = [
         {n:"库存分布", kind:"stat", src:"mat_stock"}, {n:"出入库明细", kind:"stat", src:"mat_inbound"},
         "库存调拨", "库存盘点", "其他入库", "其他出库",
     ]},
-    { name:"基础信息", leaves:[ "材料类别", "材料信息", "仓库管理", "库存初始化" ]},
+    { name:"基础信息", leaves:[ "材料类别", {n:"材料信息", coll:"materials"}, "仓库管理", "库存初始化" ]},
 ]},
 
 { key:"equip", name:"设备", icon:"🛠️", groups:[
@@ -150,7 +149,7 @@ export const MENU = [
 ]},
 
 { key:"customer", name:"客户", icon:"🧑‍💼", groups:[
-    { name:"客户管理", leaves:[ "客户信息", "联系人", "联系记录", "授权管理", "客户来源", "客户行业", "客户区域" ]},
+    { name:"客户管理", leaves:[ {n:"客户信息", coll:"customers"}, "联系人", "联系记录", "授权管理", "客户来源", "客户行业", "客户区域" ]},
     { name:"投标管理", leaves:[ "投标登记", "标书购买", "资格自审", "项目勘察", "投标文件", "竞争对手", "投标保证金", "联营投标保证金" ]},
 ]},
 
@@ -174,7 +173,6 @@ export const MENU = [
 
 { key:"doc", name:"资料", icon:"📁", groups:[
     { name:"资料中心", leaves:[ "资料类别", "资料中心", "资料借阅" ]},
-    { name:"产品反馈", leaves:[ {n:"意见与需求清单", kind:"feedback"} ]},
 ]},
 
 { key:"system", name:"系统", icon:"⚙️", groups:[
