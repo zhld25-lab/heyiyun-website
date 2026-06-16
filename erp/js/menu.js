@@ -173,6 +173,7 @@ export const MENU = [
 
 { key:"doc", name:"资料", icon:"📁", groups:[
     { name:"资料中心", leaves:[ "资料类别", "资料中心", "资料借阅" ]},
+    { name:"产品反馈", leaves:[ {n:"意见与需求清单", kind:"feedback"} ]},
 ]},
 
 { key:"system", name:"系统", icon:"⚙️", groups:[
