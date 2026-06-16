@@ -6,7 +6,7 @@
 import { MENU } from "./menu.js";
 import { REAL } from "./realdata.js";
 
-const KEY = "heyiyun_erp_db_v5";
+const KEY = "heyiyun_erp_db_v6";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
 function seed(){
@@ -189,9 +189,12 @@ function seed(){
     /* ---------- 资质证书：来自老ERP真实证书登记（含到期日；身份证/手机号已打码） ---------- */
     const certs = (REAL.certs && REAL.certs.length) ? REAL.certs.map(c=>({...c})) : [];
 
-    return { projects, contracts, subcontracts, boq, progress, cost, fin_income, fin_cash,
-             bank_accounts, bank_transfers, certs,
-             okr_periods, okr_objectives, okr_templates, okr_rules };
+    // 清空所有演示/随机生成的业务数据，仅保留：真实证书、OKR配置(周期/模板/规则)；
+    // 账号、角色、审批流由 ensure* 注入；经营分析读取 realdata 真实项目，不受影响。
+    void [projects, contracts, subcontracts, boq, progress, cost, fin_income, fin_cash, bank_accounts, bank_transfers, okr_objectives];
+    return { projects:[], contracts:[], subcontracts:[], boq:[], progress:[], cost:[], fin_income:[], fin_cash:[],
+             bank_accounts:[], bank_transfers:[], certs,
+             okr_periods, okr_objectives:[], okr_templates, okr_rules };
 }
 
 /* ---------- 权限：默认角色与账号（电力工程公司常见岗位） ---------- */
