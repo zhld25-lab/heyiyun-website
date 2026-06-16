@@ -4,9 +4,9 @@
    ============================================================ */
 
 import { MENU } from "./menu.js";
-import { REAL_DATA } from "./realseed.js";
+import { REAL_DATA } from "./realseed.js?v=v6";
 
-const KEY = "heyiyun_erp_db_v5_real";
+const KEY = "heyiyun_erp_db_v6_real";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
 function seed(){
@@ -211,9 +211,12 @@ function seed(){
     const base = { projects, contracts, subcontracts, boq, progress, cost, fin_income, fin_cash,
              bank_accounts, bank_transfers, certs,
              okr_periods, okr_objectives, okr_templates, okr_rules };
-    // 用原系统真实数据覆盖对应集合（projects/contracts/subcontracts/cost/progress/fin_salary
-    // 及客户/供应商/分包商/材料），其余演示集合保持不变
-    try{ for(const k in REAL_DATA){ if(Array.isArray(REAL_DATA[k]) && REAL_DATA[k].length) base[k]=REAL_DATA[k].map(x=>Object.assign({},x)); } }catch(e){}
+    // 只保留 H 盘真实数据：清空全部演示业务数据（保留 OKR 模板/规则作为可用配置，账号与审批流另行注入）
+    ["projects","contracts","subcontracts","boq","progress","cost","fin_income","fin_cash",
+     "bank_accounts","bank_transfers","certs","fin_salary","customers","suppliers","subcontractors",
+     "materials","okr_objectives","okr_periods"].forEach(k=>{ base[k]=[]; });
+    // 用原系统(H盘)真实数据填充对应集合
+    try{ for(const k in REAL_DATA){ if(Array.isArray(REAL_DATA[k])) base[k]=REAL_DATA[k].map(x=>Object.assign({},x)); } }catch(e){}
     return base;
 }
 
@@ -291,7 +294,6 @@ function load(){
     try{ const raw=localStorage.getItem(KEY); if(raw) data=JSON.parse(raw); }catch(e){}
     if(!data) data=seed();
     ensureAuth(data);
-    ensureCerts(data);
     ensureFlows(data);
     localStorage.setItem(KEY, JSON.stringify(data));
     return data;
@@ -304,7 +306,7 @@ export const Store = {
     add(coll,rec){ if(!db[coll]) db[coll]=[]; if(!rec.id) rec.id=uid(coll.slice(0,2).toUpperCase()); db[coll].unshift(rec); persist(); return rec; },
     update(coll,id,patch){ const r=(db[coll]||[]).find(x=>x.id===id); if(r)Object.assign(r,patch); persist(); return r; },
     remove(coll,id){ if(db[coll]) db[coll]=db[coll].filter(r=>r.id!==id); persist(); },
-    reset(){ db=ensureFlows(ensureCerts(ensureAuth(seed()))); persist(); },
+    reset(){ db=ensureFlows(ensureAuth(seed())); persist(); },
     subscribe(fn){ subs.push(fn); },
     newId:uid,
 };
