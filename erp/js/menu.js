@@ -21,6 +21,7 @@ export const MENU = [
         {n:"承包合同", coll:"contracts", kind:"stat"}, {n:"分包合同", coll:"subcontracts", kind:"stat"},
         {n:"采购合同", coll:"mat_pur_contract", kind:"stat"}, {n:"设备租赁", coll:"eq_lease_contract", kind:"stat"},
         {n:"周材租赁", coll:"zc_lease_contract", kind:"stat"},
+        {n:"经营分析", kind:"analysis"},
     ]},
 ]},
 

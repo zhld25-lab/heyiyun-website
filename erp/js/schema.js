@@ -241,6 +241,7 @@ export function schemaFor(leaf){
     if(leaf.kind==="access") return {kind:"access"};
     if(leaf.kind==="certalarm") return {kind:"certalarm"};
     if(leaf.kind==="feedback") return {kind:"feedback"};
+    if(leaf.kind==="analysis") return {kind:"analysis"};
     if(leaf.kind==="transfer") return {kind:"transfer"};
     if(leaf.kind==="flow") return {kind:"flow"};
     if(leaf.kind==="attendance") return {kind:"attendance"};

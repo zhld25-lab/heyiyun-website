@@ -13,6 +13,7 @@ import access from "./pages/access.js";
 import certalarm, { certStats, daysHtml } from "./pages/certalarm.js";
 import { ensureSeedFlows } from "./flow.js";
 import feedback from "./pages/feedback.js";
+import analysis from "./pages/analysis.js";
 
 /* 登录校验：未登录或角色失效 → 回登录页 */
 const user = currentUser();
@@ -136,6 +137,7 @@ function navigate(){
     try{
         const schema = schemaFor(leaf);
         const view = schema.kind==="access" ? access(leaf, schema)
+                   : schema.kind==="analysis" ? analysis(leaf, schema)
                    : schema.kind==="feedback" ? feedback(leaf, schema)
                    : schema.kind==="certalarm" ? certalarm(leaf, schema)
                    : (schema.kind && schema.kind.indexOf("okr_")===0) ? okr(leaf, schema)
