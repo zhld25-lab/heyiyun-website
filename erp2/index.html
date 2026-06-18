@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>恒达云ERP（元数据引擎版 · 严格对照老系统）</title>
+<style>
+:root{--blue:#1b5fe3;--navy:#0a1733;--ink:#1a2238;--gray:#5b6478;--gray-l:#8b93a7;--line:#e3e8f2;--soft:#f5f8ff;--green:#16a34a;--red:#dc2626;--orange:#e8890c;--top:48px;--left:208px}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;font-size:13px;color:var(--ink);background:#eef2f8;overflow:hidden}
+/* 顶栏 */
+#top{height:var(--top);background:linear-gradient(90deg,#0a1733,#11317a);color:#fff;display:flex;align-items:center;padding:0 14px;position:fixed;inset:0 0 auto 0;z-index:30}
+#logo{font-weight:800;font-size:16px;margin-right:20px;letter-spacing:1px}
+#topnav{display:flex;gap:2px;overflow-x:auto;flex:1}
+#topnav .m{padding:8px 14px;border-radius:7px;cursor:pointer;white-space:nowrap;color:#cfe0ff;font-weight:600}
+#topnav .m.on,#topnav .m:hover{background:rgba(255,255,255,.15);color:#fff}
+#quit{margin-left:12px;cursor:pointer;color:#cfe0ff}#quit:hover{color:#fff}
+/* 左树 */
+#left{position:fixed;top:var(--top);left:0;bottom:0;width:var(--left);background:#0f1f44;color:#c7d4ee;overflow-y:auto;z-index:20}
+.grp>.gh{padding:10px 14px;font-weight:700;color:#9fb3dd;cursor:pointer;display:flex;justify-content:space-between}
+.grp>.gh:hover{background:rgba(255,255,255,.05)}
+.leaf{padding:7px 14px 7px 26px;cursor:pointer;color:#b9c7e6;font-size:12.5px}
+.leaf:hover{background:rgba(255,255,255,.08);color:#fff}
+.leaf.on{background:var(--blue);color:#fff}
+/* 右区 + 标签 */
+#right{position:fixed;top:var(--top);left:var(--left);right:0;bottom:0;display:flex;flex-direction:column}
+#tabs{height:36px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;gap:2px;padding:0 8px;overflow-x:auto}
+.tab{padding:7px 12px;border:1px solid var(--line);border-bottom:none;border-radius:7px 7px 0 0;background:var(--soft);cursor:pointer;white-space:nowrap;color:var(--gray);font-size:12.5px;display:flex;gap:6px;align-items:center}
+.tab.on{background:#fff;color:var(--blue);font-weight:600}
+.tab .x{color:var(--gray-l)}.tab .x:hover{color:var(--red)}
+#page{flex:1;overflow:auto;padding:14px}
+/* 列表 */
+.pghead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.pghead h2{font-size:16px;color:var(--navy)}.pghead .sub{font-size:12px;color:var(--gray-l)}
+.bar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.btn{padding:6px 13px;border-radius:7px;font-weight:600;cursor:pointer;border:1.5px solid transparent;font-size:12.5px}
+.btn-p{background:var(--blue);color:#fff}.btn-l{background:#fff;border-color:var(--line);color:var(--ink)}
+.inp{padding:6px 10px;border:1.5px solid var(--line);border-radius:7px;outline:none}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:var(--soft);color:var(--navy);font-weight:700;text-align:left;padding:9px 10px;white-space:nowrap;border-bottom:1px solid var(--line);position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid #eef2f9;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+tbody tr:hover{background:var(--soft);cursor:pointer}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.empty{padding:40px;text-align:center;color:var(--gray-l)}
+/* 弹窗 */
+.mask{position:fixed;inset:0;background:rgba(10,23,51,.5);display:none;align-items:flex-start;justify-content:center;z-index:60;overflow:auto;padding:24px}
+.mask.show{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:860px;margin:auto}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0}
+.mh b{font-size:15px;color:var(--navy)}.mh .x{cursor:pointer;font-size:20px;color:var(--gray-l)}
+.mb{padding:16px 18px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px 16px}
+.fld{display:flex;flex-direction:column;gap:3px}.fld.full{grid-column:1/-1}
+.fld label{font-size:12px;color:var(--gray);font-weight:600}
+.fld .v{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:#f8fafd;min-height:32px}
+.sec{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--blue);border-left:3px solid var(--blue);padding-left:8px;margin:6px 0 0}
+</style>
+</head>
+<body>
+<div id="top"><div id="logo">恒达云ERP</div><div id="topnav"></div><div id="quit" title="说明">ⓘ</div></div>
+<div id="left"></div>
+<div id="right"><div id="tabs"></div><div id="page"></div></div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<script type="module" src="./app.js?v=1"></script>
+</body>
+</html>
