@@ -56,8 +56,13 @@ function listPage(leaf, schema){
     function distinct(coll,key){
         return [...new Set(Store.all(coll).map(r=>r[key]).filter(Boolean))];
     }
+    // 项目结束(已完工/已完成/已结束)后自动隐藏，仅总经理与超级管理员可见
+    const PROJ_DONE=["已完工","已完成","已结束","已关闭","竣工","完工"];
+    const canSeeDoneProj=()=>{ try{ return isSuper() || (currentUser()||{}).roleId==="R-gm"; }catch(e){ return false; } };
     function rows(){
+        const hideDone = leaf.coll==="projects" && !canSeeDoneProj();
         return Store.all(leaf.coll).filter(r=>{
+            if(hideDone && PROJ_DONE.includes(r.status)) return false;
             for(const k in state.filters){ if(state.filters[k] && r[k]!==state.filters[k]) return false; }
             if(dateField && (state.dateFrom||state.dateTo)){
                 const d=r[dateField.key]||""; if(state.dateFrom && d<state.dateFrom) return false; if(state.dateTo && d>state.dateTo) return false;

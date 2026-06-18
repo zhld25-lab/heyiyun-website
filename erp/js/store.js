@@ -6,8 +6,9 @@
 import { MENU } from "./menu.js";
 import { REAL_DATA } from "./realseed.js?v=v6";
 import { REAL_EXTRA } from "./realextra.js?v=v7";
+import { REAL_ATTACH } from "./realattach.js?v=1";
 
-const KEY = "heyiyun_erp_db_v7_real";
+const KEY = "heyiyun_erp_db_v8_att";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
 function seed(){
@@ -220,6 +221,8 @@ function seed(){
     try{ for(const k in REAL_DATA){ if(Array.isArray(REAL_DATA[k])) base[k]=REAL_DATA[k].map(x=>Object.assign({},x)); } }catch(e){}
     // 全量业务表真实数据（各模块叶子页面）
     try{ for(const k in REAL_EXTRA){ if(Array.isArray(REAL_EXTRA[k])) base[k]=REAL_EXTRA[k].map(x=>Object.assign({},x)); } }catch(e){}
+    // 真实附件台账（资料中心 i_attach / 资料类别 i_dir）
+    try{ if(REAL_ATTACH){ base["i_attach"]=(REAL_ATTACH.i_attach||[]).map(x=>Object.assign({},x)); base["i_dir"]=(REAL_ATTACH.i_dir||[]).map(x=>Object.assign({},x)); } }catch(e){}
     return base;
 }
 
