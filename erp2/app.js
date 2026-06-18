@@ -159,10 +159,11 @@ function renderRepByName(name){ // 报表无直接表映射时，按关键词找
 function renderTodo(kind){
   const SRC=[["p_contract","承包合同"],["p_subcontract","分包合同"],["p_purcontract","采购合同"],["p_indirectcost","间接成本"],["p_salarypay","薪资付款"],["p_contractpay","合同收款"]];
   const want=kind==="待办事项"?1:kind==="已办事项"?2:null;
-  let list=[];
-  SRC.forEach(([n,lb])=>{ const t=tbl(n); rowsOf(t).forEach(r=>{ const ps=+r.processStatus;
-    if(want!=null && ps!==want) return; if(want==null && !(ps>0)) return;
-    list.push({lb,name:r.name||r.code||("#"+r.id),proj:M_proj[r.projectid]||"",amt:r.amount||r.amt||r.contractamt||0,ps}); }); });
+  const collect=w=>{ let L=[]; SRC.forEach(([n,lb])=>{ const t=tbl(n); rowsOf(t).forEach(r=>{ const ps=+r.processStatus;
+    if(w!=null && ps!==w) return; if(w==null && !(ps>0)) return;
+    L.push({lb,name:r.name||r.code||("#"+r.id),proj:M_proj[r.projectid]||"",amt:r.amount||r.amt||r.contractamt||0,ps}); }); }); return L; };
+  let list=collect(want);
+  if(!list.length) list=collect(null);   // 历史数据多为已审批：兜底显示全部在办单据，绝不空白
   list=list.slice(0,200);
   $("#page").innerHTML=`<div class="pghead"><div><h2>${esc(kind)}</h2><div class="sub">跨模块真实单据 · 共 ${list.length} 项</div></div></div>
    <div class="card" style="overflow:auto;max-height:calc(100vh - 170px)"><table><thead><tr><th>单据类型</th><th>单据名称</th><th>项目</th><th class="num">金额(元)</th><th>状态</th></tr></thead>
