@@ -183,6 +183,7 @@ export const MENU = [
 ];
 
 /* ---------- 归一化：生成稳定 key 与覆盖 ---------- */
+import { LEAF_COLL } from "./realmap.js?v=v7";
 export function buildIndex(){
     const leaves = {};   // key -> {key,name,coll,kind,src,module,group,icon}
     MENU.forEach((m,mi)=>{
@@ -190,7 +191,9 @@ export function buildIndex(){
             g.leaves = g.leaves.map((lf,li)=>{
                 const o = typeof lf==="string" ? {n:lf} : lf;
                 const key = `${m.key}_${gi}_${li}`;
-                const leaf = { key, name:o.n, coll:o.coll||key, kind:o.kind||"list",
+                // 真实数据映射：未显式指定 coll 的叶子，按名称指向原系统数据表
+                const realColl = (!o.coll && !o.kind && LEAF_COLL[o.n]) ? LEAF_COLL[o.n] : null;
+                const leaf = { key, name:o.n, coll:o.coll||realColl||key, kind:o.kind||"list",
                                src:o.src||null, module:m.name, moduleKey:m.key, group:g.name, icon:m.icon };
                 leaves[key] = leaf;
                 return leaf;

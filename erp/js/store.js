@@ -5,8 +5,9 @@
 
 import { MENU } from "./menu.js";
 import { REAL_DATA } from "./realseed.js?v=v6";
+import { REAL_EXTRA } from "./realextra.js?v=v7";
 
-const KEY = "heyiyun_erp_db_v6_real";
+const KEY = "heyiyun_erp_db_v7_real";
 function uid(prefix){ return (prefix||"R") + "-" + Math.random().toString(36).slice(2,7).toUpperCase(); }
 
 function seed(){
@@ -217,6 +218,8 @@ function seed(){
      "materials","okr_objectives","okr_periods"].forEach(k=>{ base[k]=[]; });
     // 用原系统(H盘)真实数据填充对应集合
     try{ for(const k in REAL_DATA){ if(Array.isArray(REAL_DATA[k])) base[k]=REAL_DATA[k].map(x=>Object.assign({},x)); } }catch(e){}
+    // 全量业务表真实数据（各模块叶子页面）
+    try{ for(const k in REAL_EXTRA){ if(Array.isArray(REAL_EXTRA[k])) base[k]=REAL_EXTRA[k].map(x=>Object.assign({},x)); } }catch(e){}
     return base;
 }
 
