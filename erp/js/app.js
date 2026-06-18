@@ -5,7 +5,7 @@ import { $, $$, esc, toast, modal } from "./ui.js";
 import { Store } from "./store.js";
 import { MENU, buildIndex } from "./menu.js";
 import { schemaFor } from "./schema.js";
-import { renderLeaf } from "./engine.js";
+import { renderLeaf } from "./engine.js?v=att2";
 import { currentUser, currentRole, isSuper, canLeaf, logout } from "./auth.js";
 import dashboard from "./pages/dashboard.js";
 import okr from "./pages/okr.js";

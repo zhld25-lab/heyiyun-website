@@ -4,6 +4,7 @@
    ============================================================ */
 import { Store, Calc, fmt } from "./store.js";
 import { $, $$, modal, table, badge, riskBadge, bar, esc } from "./ui.js";
+import { attachBlock, wireAttach } from "./attach.js?v=att2";
 
 const contractName = id => { const c=Store.get("contracts",id)||Store.get("subcontracts",id); return c?c.name:id; };
 
@@ -114,9 +115,11 @@ export function openProject360(id){
         `<button data-tab="${s.key}" class="${i===0?'on':''}">${s.icon} ${s.label}</button>`).join("")}</div>`;
 
     modal({ title:`${p.name} · 项目360°视图`, large:true,
-        body:`${kpis}${tabs}<div id="p360body">${overviewHTML()}</div>`,
+        body:`${kpis}${tabs}<div id="p360body">${overviewHTML()}</div>
+            <div style="margin-top:16px">${attachBlock("projects:"+id, "项目附件")}</div>`,
         footer:`<button class="btn btn-light" data-close>关闭</button>`,
         onMount:(el,close)=>{
+            wireAttach(el);
             const body = el.querySelector("#p360body");
             function showTab(key){
                 el.querySelectorAll(".p360-tabs button").forEach(b=>b.classList.toggle("on", b.dataset.tab===key));
