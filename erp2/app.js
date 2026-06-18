@@ -76,33 +76,56 @@ function activate(id){ active=id; renderTabs(); const t=tabs[id];
 }
 
 /* 首页经营看板 */
+const PAL=["#1b5fe3","#16a34a","#e8890c","#7c3aed","#14b8d4","#dc2626","#0d9488","#eab308","#ec4899","#64748b"];
+function donutSVG(data){ const t=data.reduce((a,d)=>a+(+d.value||0),0)||1; let acc=0; const R=52,C=2*Math.PI*R;
+  const segs=data.map((d,i)=>{ const f=(+d.value||0)/t,dash=f*C,off=acc*C; acc+=f;
+    return `<circle cx="70" cy="70" r="${R}" fill="none" stroke="${d.color||PAL[i%PAL.length]}" stroke-width="16" stroke-dasharray="${dash.toFixed(2)} ${(C-dash).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"/>`;}).join("");
+  return `<svg viewBox="0 0 140 140" class="donut">${segs}</svg>`; }
+function legendHTML(data){ return `<div class="lgd">${data.map((d,i)=>`<div><span style="background:${d.color||PAL[i%PAL.length]}"></span>${esc(d.label)}<b>${d.disp||d.value}</b></div>`).join("")}</div>`; }
+function hbarsHTML(data,fmtv){ const max=Math.max(1,...data.map(d=>+d.value||0)); return `<div class="hbars">${data.map((d,i)=>`<div class="hb"><span class="hbl" title="${esc(d.label)}">${esc(d.label)}</span><div class="hbt"><i style="width:${((+d.value||0)/max*100).toFixed(1)}%;background:${PAL[i%PAL.length]}"></i></div><b class="hbv">${fmtv?fmtv(d.value):d.value}</b></div>`).join("")}</div>`; }
+function areaHTML(pts,labels){ const W=640,H=170,P=26,n=pts.length,max=Math.max(1,...pts);
+  const X=i=>P+(W-2*P)*(n<=1?0:i/(n-1)),Y=v=>H-P-(H-2*P)*(v/max);
+  const ln=pts.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" "); const step=Math.ceil(n/8)||1;
+  return `<svg viewBox="0 0 ${W} ${H}" class="area" preserveAspectRatio="none"><polygon points="${P},${H-P} ${ln} ${X(n-1).toFixed(1)},${H-P}" fill="rgba(27,95,227,.10)"/><polyline points="${ln}" fill="none" stroke="#1b5fe3" stroke-width="2.5"/>${pts.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.5" fill="#1b5fe3"/>`).join("")}${labels.map((l,i)=>i%step===0?`<text x="${X(i).toFixed(1)}" y="${H-8}" font-size="9" fill="#8b93a7" text-anchor="middle">${esc(l)}</text>`:"").join("")}</svg>`; }
 function renderHome(){
-  const proj=rowsOf(tbl("p_project")), con=rowsOf(tbl("p_contract")), sub=rowsOf(tbl("p_subcontract")),
-        pur=rowsOf(tbl("p_purcontract")), cost=rowsOf(tbl("p_indirectcost"));
-  const amt=sum(con,"amount"),recv=sum(con,"recv"),recvbl=sum(con,"receivables");
+  const proj=rowsOf(tbl("p_project")), con=rowsOf(tbl("p_contract")), sub=rowsOf(tbl("p_subcontract")), pur=rowsOf(tbl("p_purcontract")), cost=rowsOf(tbl("p_indirectcost"));
+  const amt=sum(con,"amount"),recv=sum(con,"recv"),recvbl=sum(con,"receivables"),inv=sum(con,"invoice"),settle=sum(con,"compsettlement");
   const kpi=(ic,lb,val,sub2,c)=>`<div class="kpi"><div class="ki">${ic}</div><div><div class="kl">${lb}</div><div class="kv" style="color:${c||'#0a1733'}">${val}</div>${sub2?`<div class="ks">${sub2}</div>`:''}</div></div>`;
+  const mm={}; con.forEach(c=>{ const m=(c.appdate||"").slice(0,7); if(/^\d{4}-\d\d$/.test(m)) mm[m]=(mm[m]||0)+(+c.amount||0); });
+  const months=Object.keys(mm).sort(); const mvals=months.map(m=>+(mm[m]/10000).toFixed(1));
+  const costMix=[{label:"分包",value:+(sum(sub,"amount")/10000).toFixed(0)},{label:"采购",value:+(sum(pur,"amount")/10000).toFixed(0)},{label:"间接费",value:+(sum(cost,"amount")/10000).toFixed(0)}];
+  const tc={}; con.forEach(c=>{const k=c.contracttype||"其他";tc[k]=(tc[k]||0)+1;}); const typeMix=Object.entries(tc).map(([label,value])=>({label,value}));
+  const pmp={}; con.forEach(c=>{const k=M_proj[c.projectid]||"其他";pmp[k]=(pmp[k]||0)+(+c.amount||0);});
+  const topProj=Object.entries(pmp).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([label,v])=>({label:label.length>14?label.slice(0,14)+"…":label,value:+(v/10000).toFixed(0)}));
+  const ar={}; con.forEach(c=>{const k=M_proj[c.projectid]||"其他";const v=+c.receivables||0;if(v>0)ar[k]=(ar[k]||0)+v;});
+  const topAR=Object.entries(ar).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([label,v])=>({label:label.length>14?label.slice(0,14)+"…":label,value:+(v/10000).toFixed(0)}));
   const topcon=con.slice().sort((a,b)=>(+b.amount||0)-(+a.amount||0)).slice(0,8);
+  const payOv=[{label:"合同额",value:+(amt/10000).toFixed(0)},{label:"已完产值",value:+(settle/10000).toFixed(0)},{label:"已收款",value:+(recv/10000).toFixed(0)},{label:"已开票",value:+(inv/10000).toFixed(0)},{label:"应收款",value:+(recvbl/10000).toFixed(0)}];
   $("#page").innerHTML=`
-   <div class="pghead"><div><h2>经营看板</h2><div class="sub">恒达云ERP · 来自原系统真实数据（合众电气）</div></div></div>
+   <div class="pghead"><div><h2>经营管理驾驶舱</h2><div class="sub">恒达云ERP · 合众电气真实经营数据总览</div></div></div>
    <div class="kgrid">
-     ${kpi("🏗️","项目数",proj.length,"在建/历史项目")}
-     ${kpi("📄","承包合同额",wan(amt),con.length+" 份合同","#1b5fe3")}
+     ${kpi("🏗️","在建/历史项目",proj.length,"个项目")}
+     ${kpi("📄","承包合同额",wan(amt),con.length+" 份","#1b5fe3")}
+     ${kpi("🧱","已完产值",wan(settle),"累计结算","#0d9488")}
      ${kpi("💰","累计收款",wan(recv),"回款率 "+(amt?(recv/amt*100).toFixed(1):0)+"%","#16a34a")}
-     ${kpi("⏳","应收款",wan(recvbl),"待回款","#e8890c")}
-     ${kpi("🤝","分包合同",sub.length+" 份",wan(sum(sub,"amount")))}
-     ${kpi("📦","采购合同",pur.length+" 份",wan(sum(pur,"amount")))}
-     ${kpi("🧾","间接成本",wan(sum(cost,"amount")),cost.length+" 笔")}
-     ${kpi("👤","客户/供应商",Object.keys(M_cust).length+"/"+Object.keys(M_supp).length,"往来单位")}
+     ${kpi("⏳","应收账款",wan(recvbl),"待回款","#e8890c")}
+     ${kpi("🤝","分包合同额",wan(sum(sub,"amount")),sub.length+" 份","#7c3aed")}
+     ${kpi("📦","采购合同额",wan(sum(pur,"amount")),pur.length+" 份")}
+     ${kpi("👤","往来单位",Object.keys(M_cust).length+"/"+Object.keys(M_supp).length,"客户/供应商")}
    </div>
-   <div class="hgrid">
-     <div class="card"><div class="ch">大额承包合同 Top 8</div><div style="overflow:auto"><table>
-       <thead><tr><th>合同名称</th><th>项目</th><th class="num">合同额(元)</th><th class="num">已收</th><th class="num">应收</th></tr></thead>
-       <tbody>${topcon.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(M_proj[c.projectid]||"—")}</td><td class="num">${yuan(c.amount)}</td><td class="num" style="color:#16a34a">${yuan(c.recv)}</td><td class="num" style="color:#e8890c">${yuan(c.receivables)}</td></tr>`).join("")}</tbody>
-     </table></div></div>
-     <div class="card"><div class="ch">项目一览</div><div style="overflow:auto;max-height:340px"><table>
-       <thead><tr><th>项目名称</th><th>负责人</th><th class="num">预算成本</th><th class="num">完成率</th></tr></thead>
-       <tbody>${proj.slice(0,20).map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(M_user[p.managerid]||"—")}</td><td class="num">${yuan(p.ctbudget)}</td><td class="num">${p.comprate!=null?(+p.comprate).toFixed(1)+"%":"—"}</td></tr>`).join("")}</tbody>
-     </table></div></div>
+   <div class="card chart-wide"><div class="ch">月度签约金额趋势（万元）</div><div class="cbody">${months.length?areaHTML(mvals,months):'<div class="empty">无</div>'}</div></div>
+   <div class="dash3">
+     <div class="card"><div class="ch">成本构成</div><div class="cbody donut-wrap">${donutSVG(costMix.map((d,i)=>({...d,color:PAL[i]})))}${legendHTML(costMix.map((d,i)=>({label:d.label,value:d.value+"万",color:PAL[i]})))}</div></div>
+     <div class="card"><div class="ch">合同类型分布</div><div class="cbody donut-wrap">${donutSVG(typeMix)}${legendHTML(typeMix.map(d=>({label:d.label,value:d.value+"份"})))}</div></div>
+     <div class="card"><div class="ch">收付款概览（万元）</div><div class="cbody">${hbarsHTML(payOv,v=>(+v).toLocaleString())}</div></div>
+   </div>
+   <div class="dash2">
+     <div class="card"><div class="ch">合同额 Top10 项目（万元）</div><div class="cbody">${hbarsHTML(topProj,v=>(+v).toLocaleString())}</div></div>
+     <div class="card"><div class="ch">应收账款 Top8 项目（万元）</div><div class="cbody">${topAR.length?hbarsHTML(topAR,v=>(+v).toLocaleString()):'<div class="empty">无应收</div>'}</div></div>
+   </div>
+   <div class="dash2">
+     <div class="card"><div class="ch">大额承包合同 Top8</div><div style="overflow:auto"><table><thead><tr><th>合同名称</th><th>项目</th><th class="num">合同额(元)</th><th class="num">已收</th><th class="num">应收</th></tr></thead><tbody>${topcon.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(M_proj[c.projectid]||"—")}</td><td class="num">${yuan(c.amount)}</td><td class="num" style="color:#16a34a">${yuan(c.recv)}</td><td class="num" style="color:#e8890c">${yuan(c.receivables)}</td></tr>`).join("")}</tbody></table></div></div>
+     <div class="card"><div class="ch">项目一览</div><div style="overflow:auto;max-height:320px"><table><thead><tr><th>项目名称</th><th>负责人</th><th class="num">预算成本</th><th class="num">完成率</th></tr></thead><tbody>${proj.slice(0,20).map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(M_user[p.managerid]||"—")}</td><td class="num">${yuan(p.ctbudget)}</td><td class="num">${p.comprate!=null?(+p.comprate).toFixed(1)+"%":"—"}</td></tr>`).join("")}</tbody></table></div></div>
    </div>`;
 }
 
