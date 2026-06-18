@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>承包合同 · 恒达云ERP（严格对齐老系统 form#8 / list#300）</title>
+<style>
+:root{--blue:#1b5fe3;--blue-d:#0e3fa8;--navy:#0a1733;--ink:#1a2238;--gray:#5b6478;--gray-l:#8b93a7;--line:#e8ecf4;--soft:#f5f8ff;--green:#16a34a;--red:#dc2626;--orange:#e8890c}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Microsoft YaHei",sans-serif;color:var(--ink);background:#f3f6fc;font-size:14px;line-height:1.6}
+.wrap{max-width:1180px;margin:0 auto;padding:18px}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.head h1{font-size:20px;color:var(--navy)}.head .sub{font-size:12px;color:var(--gray-l)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:9px;font-size:14px;font-weight:600;border:1.5px solid transparent;cursor:pointer;background:none}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--blue-d));color:#fff}
+.btn-light{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn-sm{padding:4px 10px;font-size:13px;border-radius:7px}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.inp{padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;outline:none;background:#fff}
+.inp:focus{border-color:var(--blue)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 22px rgba(16,40,90,.06)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--soft);color:var(--navy);font-weight:700;text-align:left;padding:11px 12px;white-space:nowrap;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;border-bottom:1px solid #eef2f9;white-space:nowrap}
+tbody tr:hover{background:var(--soft);cursor:pointer}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:600}
+.bg-blue{background:#e7efff;color:var(--blue)}.bg-green{background:#e7f7ec;color:var(--green)}.bg-gray{background:#eef1f6;color:var(--gray)}.bg-orange{background:#fff3e3;color:var(--orange)}
+.lnk{color:var(--blue);cursor:pointer}.lnk:hover{text-decoration:underline}
+/* 弹窗 */
+.mask{position:fixed;inset:0;background:rgba(10,23,51,.5);display:none;align-items:flex-start;justify-content:center;z-index:50;overflow:auto;padding:24px}
+.mask.show{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:880px;margin:auto}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;border-radius:14px 14px 0 0}
+.modal-h b{font-size:16px;color:var(--navy)}.modal-h .x{cursor:pointer;font-size:22px;color:var(--gray-l)}
+.modal-b{padding:18px 20px}
+.modal-f{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;position:sticky;bottom:0;background:#fff}
+/* 表单网格：严格按 form#8 的 rowIx/colIx 两列 */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.fld{display:flex;flex-direction:column;gap:4px}.fld.full{grid-column:1/-1}
+.fld label{font-size:12.5px;color:var(--gray);font-weight:600}.fld label .req{color:var(--red)}
+.fld input,.fld select,.fld textarea{padding:8px 11px;border:1.5px solid var(--line);border-radius:8px;outline:none;font:inherit;width:100%}
+.fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--blue)}
+.fld input[readonly]{background:#f7f9fd;color:var(--gray)}
+.sec{grid-column:1/-1;margin:6px 0 2px;font-size:12px;font-weight:700;color:var(--blue);border-left:3px solid var(--blue);padding-left:8px}
+.det-tbl td,.det-tbl th{padding:6px 8px;font-size:13px}
+.det-tbl input{padding:5px 7px;border:1px solid var(--line);border-radius:6px;width:100%}
+.flowbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--soft);border-radius:9px;padding:10px 12px;margin-bottom:14px;font-size:13px}
+.fstep{display:flex;align-items:center;gap:6px;color:var(--gray)}
+.fstep .d{width:20px;height:20px;border-radius:50%;background:#dde6f5;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+.fstep.done .d{background:var(--green)}.fstep.cur .d{background:var(--blue)}
+.tip{font-size:12px;color:var(--gray-l);margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div><h1>承包合同</h1><div class="sub">项目 › 承包合同（严格对齐老系统：表单 form#8 · 列表 list#300 · 流程 processType#2）</div></div>
+    <div><button class="btn btn-light" id="impBtn">⬆ 导入</button> <button class="btn btn-primary" id="addBtn">＋ 新建合同</button></div></div>
+  <div class="toolbar">
+    <input class="inp" id="q" placeholder="搜索 合同名称/编号…" style="width:240px">
+    <select class="inp" id="fProj"><option value="">全部项目</option></select>
+    <select class="inp" id="fStatus"><option value="">全部状态</option><option>执行中</option><option>已完成</option><option>已作废</option></select>
+    <span style="flex:1"></span><span id="summary" style="font-size:13px;color:var(--gray)"></span>
+  </div>
+  <div class="card"><div style="overflow:auto"><table id="tbl"></table></div></div>
+  <p class="tip">说明：合同金额按老系统以「元」展示（格式 #,##0.00）。点甲方单位/项目可下钻；点行查看详情。累计变更/索赔/扣款/罚款/进度款/收款/开票由对应单据写回（此处「收款」「开票」已可操作演示写回逻辑）。</p>
+</div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<script type="module">
+import { CONTRACTS, CT_DETAIL } from "./js/contract_real.js";
+
+const KEY="hd_contracts_v1";
+let DB = load();
+function load(){ try{const r=localStorage.getItem(KEY); if(r) return JSON.parse(r);}catch(e){}
+  const d=CONTRACTS.map(c=>({...c, detail:(CT_DETAIL[c.id]||CT_DETAIL[String(c.id)]||[]).map(x=>({...x}))})); localStorage.setItem(KEY,JSON.stringify(d)); return d; }
+function save(){ localStorage.setItem(KEY,JSON.stringify(DB)); }
+
+const projects=[...new Set(CONTRACTS.map(c=>c.projectName).filter(Boolean))];
+const TYPES=["总价合同","单价合同","成本加酬金","框架协议","其他"];
+const PAYTYPE=["按进度付款","按节点付款","按月结算","一次性结算","其他"];
+const PAYMEANS=["银行转账","承兑汇票","现金","按合同付款","其他"];
+const STATUS=["执行中","已完成","已作废","草稿"];
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const money=v=>(+v||0).toLocaleString("zh-CN",{minimumFractionDigits:2,maximumFractionDigits:2});
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* 人民币金额大写（对应老系统 upperMoney 计算字段） */
+function upperMoney(n){
+  n=+n||0; if(n===0) return "零元整";
+  const dg="零壹贰叁肆伍陆柒捌玖", un=["","拾","佰","仟"], gr=["","万","亿","兆"];
+  let neg=n<0; n=Math.abs(n);
+  let i=Math.floor(n), f=Math.round((n-i)*100);
+  let s="";
+  if(i===0) s="零";
+  let g=0;
+  while(i>0){ let sec=i%10000, t="", zero=false, k=0, x=sec;
+    let part="";
+    for(let p=0;p<4&&x>0;p++){ let d=x%10; x=Math.floor(x/10);
+      if(d===0){ if(part&&part[0]!=="零") part="零"+part; }
+      else part=dg[d]+un[p]+part; }
+    s=(part?part+gr[g]:(s&&s[0]!=="零"?"零":""))+s; i=Math.floor(i/10000); g++; }
+  s=s.replace(/零+/g,"零").replace(/零$/,"");
+  let r=(neg?"负":"")+s+"元";
+  if(f===0) r+="整";
+  else { let jiao=Math.floor(f/10), fen=f%10;
+    r+=(jiao?dg[jiao]+"角":(fen?"零":""))+(fen?dg[fen]+"分":""); }
+  return r;
+}
+
+/* 累计派生：待收 = (合计+变更+索赔-扣款-罚款) - 已收；应收 = 已开票 - 已收 */
+function calcDerive(c){
+  const settle=(+c.sumamt||0)+(+c.visa||0)+(+c.claim||0)-(+c.deduction||0)-(+c.fine||0);
+  c.curreceivables=Math.round((settle-(+c.recv||0))*100)/100;
+  c.receivables=Math.round(((+c.invoice||0)-(+c.recv||0))*100)/100;
+}
+
+const state={q:"",proj:"",status:""};
+function rows(){ return DB.filter(c=>{
+  if(state.proj && c.projectName!==state.proj) return false;
+  if(state.status && c.status!==state.status) return false;
+  if(state.q){ const q=state.q; return (c.name||"").includes(q)||(c.code||"").includes(q); }
+  return true; }); }
+
+function renderList(){
+  const data=rows();
+  let h=`<thead><tr><th>合同编号</th><th>合同名称</th><th>合同类型</th><th>甲方单位</th><th>项目</th><th class="num">合同金额(元)</th><th class="num">累计收款</th><th class="num">应收款</th><th>状态</th><th>签订人</th></tr></thead><tbody>`;
+  if(!data.length) h+=`<tr><td colspan="10" style="text-align:center;color:var(--gray-l);padding:30px">无数据</td></tr>`;
+  data.forEach((c,i)=>{ h+=`<tr data-i="${DB.indexOf(c)}">
+    <td><b>${esc(c.code)}</b></td><td>${esc(c.name)}</td><td>${esc(c.contracttype)}</td>
+    <td><span class="lnk" data-cust="${esc(c.custName)}">${esc(c.custName||"—")}</span></td>
+    <td><span class="lnk" data-proj="${esc(c.projectName)}">${esc(c.projectName||"—")}</span></td>
+    <td class="num">${money(c.amount)}</td><td class="num">${money(c.recv)}</td>
+    <td class="num" style="color:${(+c.receivables)>0?'var(--orange)':'var(--green)'}">${money(c.receivables)}</td>
+    <td><span class="badge ${c.status==='已完成'?'bg-green':c.status==='已作废'?'bg-gray':'bg-blue'}">${esc(c.status)}</span></td>
+    <td>${esc(c.userName||"—")}</td></tr>`; });
+  h+=`</tbody>`; $("#tbl").innerHTML=h;
+  const sum=data.reduce((a,c)=>a+(+c.amount||0),0), rsum=data.reduce((a,c)=>a+(+c.recv||0),0);
+  $("#summary").innerHTML=`共 <b>${data.length}</b> 份 · 合同额合计 <b style="color:var(--blue)">¥${money(sum)}</b> · 已收 <b style="color:var(--green)">¥${money(rsum)}</b>`;
+  $$("#tbl tbody tr[data-i]").forEach(tr=>tr.onclick=e=>{
+    if(e.target.dataset.cust){ alert("下钻：甲方单位详情 → "+e.target.dataset.cust); return; }
+    if(e.target.dataset.proj){ alert("下钻：项目流程 → "+e.target.dataset.proj); return; }
+    openForm(+tr.dataset.i); });
+}
+
+function fld(label,inner,full,req){ return `<div class="fld ${full?'full':''}"><label>${label}${req?' <span class="req">*</span>':''}</label>${inner}</div>`; }
+function opts(arr,v){ return arr.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join(""); }
+
+function openForm(idx){
+  const c = idx>=0 ? JSON.parse(JSON.stringify(DB[idx])) : blank();
+  calcDerive(c);
+  const isNew=idx<0;
+  const sel=(v,arr)=>`<select data-k autocomplete="off">${['',...arr].map(o=>`<option ${o===v?'selected':''}>${o||'请选择'}</option>`).join("")}</select>`;
+  const body=`
+   ${!isNew?flowbar(c):''}
+   <div class="fgrid">
+    ${fld("合同名称",`<input data-k="name" value="${esc(c.name)}">`,false,true)}
+    ${fld("合同编号(自动)",`<input data-k="code" value="${esc(c.code)}" readonly>`)}
+    ${fld("项目",`<select data-k="projectName">${['',...projects].map(o=>`<option ${o===c.projectName?'selected':''}>${o||'请选择'}</option>`).join("")}</select>`,false,true)}
+    ${fld("甲方单位",`<input data-k="custName" value="${esc(c.custName)}">`)}
+    ${fld("合同类型",`<select data-k="contracttype">${['',...TYPES].map(o=>`<option ${o===c.contracttype?'selected':''}>${o||'请选择'}</option>`).join("")}</select>`,false,true)}
+    ${fld("开始日期",`<input type="date" data-k="startdate" value="${esc(c.startdate)}">`)}
+    ${fld("结束日期",`<input type="date" data-k="enddate" value="${esc(c.enddate)}">`)}
+    ${fld("合同金额(元)",`<input type="number" step="0.01" data-k="amount" id="f_amount" value="${c.amount||0}">`,false,true)}
+    ${fld("金额(大写)",`<input data-k="upperamt" id="f_upperamt" value="${esc(upperMoney(c.amount))}" readonly>`)}
+    ${fld("结算方式",`<select data-k="paytype">${['',...PAYTYPE].map(o=>`<option ${o===c.paytype?'selected':''}>${o||'请选择'}</option>`).join("")}</select>`)}
+    ${fld("付款方式",`<select data-k="paymeans">${['',...PAYMEANS].map(o=>`<option ${o===c.paymeans?'selected':''}>${o||'请选择'}</option>`).join("")}</select>`)}
+    ${fld("预收款",`<input type="number" step="0.01" data-k="prepay" value="${c.prepay||0}">`)}
+    ${fld("质保金",`<input type="number" step="0.01" data-k="deposit" value="${c.deposit||0}">`)}
+    ${fld("签订人",`<input data-k="userName" value="${esc(c.userName)}">`)}
+    ${fld("签订日期",`<input type="date" data-k="appdate" value="${esc(c.appdate)}">`,false,true)}
+    ${fld("收款条件",`<textarea data-k="payterm" rows="2">${esc(c.payterm)}</textarea>`,true)}
+    ${fld("主要条款",`<textarea data-k="content" rows="2">${esc(c.content)}</textarea>`,true)}
+    ${fld("备注",`<textarea data-k="remark" rows="2">${esc(c.remark)}</textarea>`,true)}
+    <div class="sec">工程量清单（双价明细）</div>
+    <div class="full" id="detWrap"></div>
+    ${fld("合计",`<input data-k="sumamt" id="f_sumamt" value="${money(c.sumamt)}" readonly>`)}
+    ${fld("合计(大写)",`<input id="f_uppersum" value="${esc(upperMoney(c.sumamt))}" readonly>`)}
+    <div class="sec">累计台账（由变更/索赔/扣款/罚款/进度款/收款/开票单据写回）</div>
+    ${fld("累计变更",`<input value="${money(c.visa)}" readonly>`)}
+    ${fld("累计索赔",`<input value="${money(c.claim)}" readonly>`)}
+    ${fld("累计扣款",`<input value="${money(c.deduction)}" readonly>`)}
+    ${fld("累计罚款",`<input value="${money(c.fine)}" readonly>`)}
+    ${fld("累计进度款",`<input value="${money(c.progress)}" readonly>`)}
+    ${fld("完工结算款",`<input value="${money(c.compsettlement)}" readonly>`)}
+    ${fld("累计收款",`<input id="f_recv" value="${money(c.recv)}" readonly>`)}
+    ${fld("待收金额",`<input id="f_cur" value="${money(c.curreceivables)}" readonly>`)}
+    ${fld("累计开票",`<input id="f_inv" value="${money(c.invoice)}" readonly>`)}
+    ${fld("应收款",`<input id="f_rcv" value="${money(c.receivables)}" readonly>`)}
+    ${fld("状态",`<select data-k="status">${opts(STATUS,c.status)}</select>`,false,true)}
+    ${fld("质保到期日",`<input type="date" data-k="warrantydate" value="${esc(c.warrantydate)}">`)}
+   </div>`;
+  const foot = isNew
+    ? `<button class="btn btn-light" data-close>取消</button><button class="btn btn-primary" data-save>保存提交</button>`
+    : `<button class="btn btn-light" data-close>关闭</button>
+       <button class="btn btn-light" data-recv>登记收款</button>
+       <button class="btn btn-light" data-inv>登记开票</button>
+       <button class="btn btn-primary" data-save>保存</button>`;
+  $("#modal").innerHTML=`<div class="modal-h"><b>${isNew?'新建承包合同':'承包合同 · '+esc(c.name)}</b><span class="x" data-close>×</span></div>
+     <div class="modal-b">${body}</div><div class="modal-f">${foot}</div>`;
+  $("#mask").classList.add("show");
+  renderDetail(c);
+  // 金额大写联动
+  const am=$("#f_amount"); if(am) am.oninput=()=>{ $("#f_upperamt").value=upperMoney(am.value); };
+  // 关闭
+  $$("#modal [data-close]").forEach(b=>b.onclick=close);
+  // 保存
+  $("#modal [data-save]").onclick=()=>{
+    const g=k=>{const n=$(`#modal [data-k="${k}"]`);return n?n.value:undefined;};
+    ["name","code","projectName","custName","contracttype","startdate","enddate","paytype","paymeans","userName","appdate","payterm","content","remark","status","warrantydate"].forEach(k=>{const v=g(k); if(v!==undefined) c[k]=v==='请选择'?'':v;});
+    c.amount=+g("amount")||0; c.prepay=+g("prepay")||0; c.deposit=+g("deposit")||0;
+    c.upperamt=upperMoney(c.amount);
+    c.detail=collectDetail(); c.sumamt=c.detail.reduce((a,d)=>a+(+d.sumprice||0),0);
+    calcDerive(c);
+    if(isNew){ c.id=Math.max(0,...DB.map(x=>+x.id||0))+1; c.code=autoCode(); DB.unshift(c); }
+    else DB[idx]=c;
+    save(); close(); renderList();
+  };
+  const rb=$("#modal [data-recv]"); if(rb) rb.onclick=()=>{ const v=parseFloat(prompt("登记收款金额(元)："));
+    if(v>0){ c.recv=(+c.recv||0)+v; calcDerive(c); DB[idx]=c; save();
+      $("#f_recv").value=money(c.recv); $("#f_cur").value=money(c.curreceivables); $("#f_rcv").value=money(c.receivables); renderList(); } };
+  const ib=$("#modal [data-inv]"); if(ib) ib.onclick=()=>{ const v=parseFloat(prompt("登记开票金额(元)："));
+    if(v>0){ c.invoice=(+c.invoice||0)+v; calcDerive(c); DB[idx]=c; save();
+      $("#f_inv").value=money(c.invoice); $("#f_rcv").value=money(c.receivables); renderList(); } };
+}
+function flowbar(c){
+  const done=c.status!=='草稿';
+  return `<div class="flowbar"><b style="color:var(--navy)">审批流程(承包合同)：</b>
+   <div class="fstep done"><span class="d">✓</span>提交 ${esc(c.userName||'')}</div>›
+   <div class="fstep done"><span class="d">✓</span>财务经理</div>›
+   <div class="fstep ${done?'done':'cur'}"><span class="d">${done?'✓':'!'}</span>总经理</div>›
+   <div class="fstep ${done?'done':''}"><span class="d">${done?'🏁':''}</span>${done?'已生效':'审批中'}</div></div>`;
+}
+let curDetail=[];
+function renderDetail(c){ curDetail=(c.detail||[]).map(d=>({...d}));
+  drawDetail(); }
+function drawDetail(){
+  let h=`<table class="det-tbl"><thead><tr><th style="width:90px">清单编码</th><th>清单名称</th><th style="width:60px">单位</th><th style="width:90px" class="num">数量</th><th style="width:100px" class="num">综合单价</th><th style="width:110px" class="num">金额</th><th style="width:40px"></th></tr></thead><tbody>`;
+  curDetail.forEach((d,i)=>{ h+=`<tr>
+    <td><input value="${esc(d.code)}" data-di="${i}" data-f="code"></td>
+    <td><input value="${esc(d.name)}" data-di="${i}" data-f="name"></td>
+    <td><input value="${esc(d.unit)}" data-di="${i}" data-f="unit"></td>
+    <td><input type="number" class="num" value="${d.amt||0}" data-di="${i}" data-f="amt"></td>
+    <td><input type="number" class="num" value="${d.price||0}" data-di="${i}" data-f="price"></td>
+    <td class="num"><b>${money((+d.amt||0)*(+d.price||0))}</b></td>
+    <td><span class="lnk" data-del="${i}">删</span></td></tr>`; });
+  h+=`</tbody></table><button class="btn btn-light btn-sm" id="addRow" style="margin-top:8px">＋ 添加清单行</button>`;
+  $("#detWrap").innerHTML=h;
+  $$("#detWrap input").forEach(inp=>inp.oninput=()=>{ const i=+inp.dataset.di,f=inp.dataset.f;
+    curDetail[i][f]=f==='amt'||f==='price'?(+inp.value||0):inp.value;
+    if(f==='amt'||f==='price'){ curDetail[i].sumprice=(+curDetail[i].amt||0)*(+curDetail[i].price||0); recalcSum(); inp.closest("tr").querySelector("td.num b").textContent=money(curDetail[i].sumprice); } });
+  $$("#detWrap [data-del]").forEach(s=>s.onclick=()=>{ curDetail.splice(+s.dataset.del,1); drawDetail(); recalcSum(); });
+  $("#addRow").onclick=()=>{ curDetail.push({code:"",name:"",unit:"",amt:0,price:0,sumprice:0}); drawDetail(); };
+}
+function collectDetail(){ curDetail.forEach(d=>d.sumprice=(+d.amt||0)*(+d.price||0)); return curDetail; }
+function recalcSum(){ const s=curDetail.reduce((a,d)=>a+(+d.amt||0)*(+d.price||0),0);
+  if($("#f_sumamt")) $("#f_sumamt").value=money(s); if($("#f_uppersum")) $("#f_uppersum").value=upperMoney(s); }
+function autoCode(){ const y=new Date().getFullYear(); const n=DB.filter(c=>(c.code||"").includes(y+"-")).length+1; return y+"-"+String(n).padStart(3,"0"); }
+function blank(){ return {name:"",code:"(保存后自动生成)",projectName:"",custName:"",contracttype:"",startdate:"",enddate:"",amount:0,prepay:0,deposit:0,paytype:"",paymeans:"",userName:"",appdate:new Date().toISOString().slice(0,10),payterm:"",content:"",remark:"",detail:[],sumamt:0,visa:0,claim:0,deduction:0,fine:0,progress:0,compsettlement:0,recv:0,curreceivables:0,invoice:0,receivables:0,status:"草稿",warrantydate:""}; }
+function close(){ $("#mask").classList.remove("show"); }
+
+// 初始化
+projects.forEach(p=>{const o=document.createElement("option");o.textContent=p;$("#fProj").append(o);});
+$("#q").oninput=e=>{state.q=e.target.value;renderList();};
+$("#fProj").onchange=e=>{state.proj=e.target.value;renderList();};
+$("#fStatus").onchange=e=>{state.status=e.target.value;renderList();};
+$("#addBtn").onclick=()=>openForm(-1);
+$("#impBtn").onclick=()=>alert("导入：解析 Excel 批量入库（与列表页导入一致）");
+$("#mask").onclick=e=>{ if(e.target.id==="mask") close(); };
+DB.forEach(calcDerive); renderList();
+</script>
+</body>
+</html>
